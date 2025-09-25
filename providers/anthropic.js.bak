@@ -8,7 +8,7 @@ const fetchFn = (...args) =>
 class AnthropicProvider {
   constructor() {
     this.key = process.env.ANTHROPIC_API_KEY;
-    this.model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
+    this.model = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
     if (!this.key) throw new Error('ANTHROPIC_API_KEY is undefined');
   }
 

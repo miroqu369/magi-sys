@@ -28,8 +28,7 @@ global.app.get('/status', (_req, res) => {
 
 // 3) アプリ本体読込
 try { 
-  require('./routes-introspect');
-    require('./server.js'); 
+  require('./server.js'); 
   console.log('server.js loaded successfully');
 } catch (e) { 
   console.error('server.js load error:', e); 

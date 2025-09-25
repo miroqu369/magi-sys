@@ -1,9 +1,6 @@
-'use strict';
-const app = global.app;
-
-if (!app) {
-  throw new Error('global.app is not defined. bootstrap.js must run first!');
-}
+const express = require('express');
+const app = express();
+app.use(express.json({ limit: '1mb' }));
 
 /* === callChat fallback (utilsが無くても動く) === */
 let callChat;
@@ -23,13 +20,33 @@ if (!callChat) {
     switch (provider) {
       case 'grok':      return grok.chat({      model: process.env.XAI_MODEL       || 'grok-2',                    messages, temperature, timeoutMs });
       case 'gemini':    return gemini.chat({    model: process.env.GEMINI_MODEL    || 'gemini-1.5-pro',           messages, temperature, timeoutMs });
-      case 'anthropic': return anthropic.chat({ model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514', messages, temperature, timeoutMs });
+      case 'anthropic': return anthropic.chat({ model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest', messages, temperature, timeoutMs });
       case 'openai':    return openai.chat({    model: process.env.OPENAI_MODEL    || 'gpt-4o-mini',              messages, temperature, timeoutMs });
       default: throw new Error(`Unsupported provider: ${provider}`);
     }
   };
 }
 /* === end fallback === */
+
+// ---- healthz ----
+app.get('/healthz', (_req, res) => res.status(200).send('ok'));
+
+// ---- status（Secrets有無とmodel名を可視化）----
+app.get('/status', (_req, res) => {
+  const secretsBound = {
+    OPENAI_API_KEY   : !!process.env.OPENAI_API_KEY,
+    GEMINI_API_KEY   : !!process.env.GEMINI_API_KEY,
+    ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
+    XAI_API_KEY      : !!process.env.XAI_API_KEY,
+  };
+  const models = {
+    OPENAI_MODEL    : process.env.OPENAI_MODEL    || 'gpt-4o-mini',
+    GEMINI_MODEL    : process.env.GEMINI_MODEL    || 'gemini-1.5-pro',
+    ANTHROPIC_MODEL : process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-latest',
+    XAI_MODEL       : process.env.XAI_MODEL       || 'grok-2',
+  };
+  res.json({ region: process.env.GOOGLE_CLOUD_REGION || 'unknown', secretsBound, models, now: new Date().toISOString() });
+});
 
 // ---- consensus ----
 app.post('/api/consensus', async (req, res) => {
@@ -39,22 +56,17 @@ app.post('/api/consensus', async (req, res) => {
       return res.status(400).json({ error: 'prompt (string) is required' });
     }
 
-    console.log(`[Consensus] Prompt: ${prompt.substring(0, 50)}...`);
-
     const results = await Promise.allSettled([
       callChat('grok', prompt, meta),
       callChat('gemini', prompt, meta),
       callChat('anthropic', prompt, meta),
     ]);
-    
     const providers = ['grok','gemini','anthropic'];
     const candidates = results.map((r, i) =>
       r.status === 'fulfilled'
         ? { provider: providers[i], text: String(r.value || '').trim() }
         : { provider: providers[i], error: String(r.reason?.message || r.reason || 'failed') }
     );
-
-    console.log(`[Consensus] Results: ${candidates.map(c => c.provider + ':' + (c.text ? 'OK' : 'FAIL')).join(', ')}`);
 
     const texts = candidates.filter(c => c.text).map(c => c.text);
     let agreement_ratio = 0;
@@ -68,7 +80,7 @@ app.post('/api/consensus', async (req, res) => {
     let final = texts[0] || '';
     let judge = null;
 
-    if (agreement_ratio < 0.66 && texts.length > 0) {
+    if (agreement_ratio < 0.66) {
       try {
         const judged = await callChat(
           'openai',
@@ -76,23 +88,15 @@ app.post('/api/consensus', async (req, res) => {
           candidates.map((c, i) => `(${i+1}) [${c.provider}] ${c.text || c.error || 'N/A'}`).join('\n'),
           meta
         );
-        if (judged) { 
-          final = String(judged).trim(); 
-          judge = 'openai';
-          console.log('[Consensus] Judge: openai selected');
-        }
-      } catch (judgeErr) { 
-        console.error('[Consensus] Judge error:', judgeErr.message);
-      }
+        if (judged) { final = String(judged).trim(); judge = 'openai'; }
+      } catch (_) { /* judgeが落ちても候補先頭 */ }
     }
 
     res.json({ final, judge, candidates, metrics: { agreement_ratio } });
   } catch (e) {
-    console.error('[Consensus] Error:', e);
+    console.error(e);
     res.status(500).json({ error: String(e.message || e) });
   }
 });
-
-console.log('✓ /api/consensus route registered on global.app');
 
 module.exports = app;

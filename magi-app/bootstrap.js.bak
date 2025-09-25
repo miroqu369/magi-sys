@@ -1,0 +1,60 @@
+'use strict';
+const express = require('express');
+
+// 1) 単一app
+global.app = express();
+global.app.use(express.json({ limit: '1mb' }));
+
+// 2) 先に基盤ルート
+global.app.get('/healthz', (_req, res) => res.status(200).send('ok'));
+global.app.get('/status', (_req, res) => {
+  res.json({
+    service: 'magi-app',
+    time: new Date().toISOString(),
+    secrets: {
+      OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+      GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
+      XAI_API_KEY: !!process.env.XAI_API_KEY,
+      ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY
+    }
+  });
+});
+
+// 3) アプリ本体読込
+try { 
+  require('./server.js'); 
+} catch (e) { 
+  console.error('server.js load error:', e); 
+}
+
+// 4) listenはここだけ
+const port = Number(process.env.PORT) || 8080;
+global.app.listen(port, '0.0.0.0', () => {
+  console.log(`bootstrap listening on port ${port}`);
+});
+
+// ルート一覧を JSON で返す（運用確認用）
+global.app.get('/__routes', (_req, res) => {
+  const list = [];
+  const stack = (global.app && global.app._router && global.app._router.stack) || [];
+  stack.forEach(m => {
+    if (m.route && m.route.path) {
+      const methods = Object.keys(m.route.methods || {}).filter(Boolean);
+      list.push({ path: m.route.path, methods });
+    }
+  });
+  res.json({ routes: list });
+});
+
+// ルート一覧を JSON で返す（運用確認用）
+global.app.get('/__routes', (_req, res) => {
+  const list = [];
+  const stack = (global.app && global.app._router && global.app._router.stack) || [];
+  stack.forEach(m => {
+    if (m.route && m.route.path) {
+      const methods = Object.keys(m.route.methods || {}).filter(Boolean);
+      list.push({ path: m.route.path, methods });
+    }
+  });
+  res.json({ routes: list });
+});
