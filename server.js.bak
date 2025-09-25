@@ -1,0 +1,112 @@
+
+
+/* ---------- Grok ping (暫定疎通用) ---------- */
+try {
+  const GrokProvider = require('./providers/grok');
+  if (typeof app !== 'undefined' && app.post) {
+    const __grok = new GrokProvider();
+    app.post('/api/grok/ping', async (_req, res) => {
+      try {
+        await __grok.ping();
+        const text = await __grok.chat('ping');
+        res.json({ ok: true, text });
+      } catch (e) {
+        console.error('grok ping error:', e);
+        res.status(500).json({ ok: false, error: String(e) });
+      }
+    });
+  } else {
+    console.error('grok init error: app is not defined yet');
+  }
+} catch (e) {
+  console.error('grok init error:', e);
+}
+/* ----------------------------------------- */
+
+
+/* debug: 一時的に登録ルートを可視化 */
+app.get('/__routes', (_req, res) => {
+  try {
+    const routes = (app._router?.stack || [])
+      .filter(s => s.route && s.route.path)
+      .map(s => ({ method: Object.keys(s.route.methods)[0]?.toUpperCase(), path: s.route.path }));
+    res.json(routes);
+  } catch (e) {
+    res.status(500).json({error:String(e)});
+  }
+});
+
+
+/* ---------- consensus (Grok/Gemini/Claude → GPT裁定) ---------- */
+app.post('/api/consensus', async (req, res) => {
+  try {
+    const prompt = req.body?.prompt;
+    const temperature = req.body?.meta?.temperature ?? 0.2;
+    const timeout = req.body?.meta?.timeout_ms ?? 25000;
+
+    const Grok   = require('./providers/grok');
+    const Gemini = require('./providers/gemini');
+    const Claude = require('./providers/anthropic');
+    const Judge  = require('./providers/openai'); // GPT裁定
+
+    const p = {
+      grok:   new Grok(),
+      gemini: new Gemini(),
+      claude: new Claude(),
+      judge:  new Judge(),
+    };
+
+    const run = (name, fn) => Promise.race([
+      fn(prompt, { temperature }),
+      new Promise((_, r) => setTimeout(() => r(new Error(`${name} timeout`)), timeout))
+    ]).then(t => ({ provider: name, ok: true, text: t }))
+     .catch(e => ({ provider: name, ok: false, error: String(e) }));
+
+    const [grok, gemini, claude] = await Promise.all([
+      run('grok',   p.grok.chat.bind(p.grok)),
+      run('gemini', p.gemini.chat.bind(p.gemini)),
+      run('claude', p.claude.chat.bind(p.claude)),
+    ]);
+
+    const valids = [grok, gemini, claude].filter(v => v.ok && v.text?.trim());
+    if (valids.length === 0) throw new Error('all providers failed');
+
+    // 簡易一致率（先頭120文字）
+    const sig = s => (s || '').slice(0, 120);
+    const uniq = new Set(valids.map(v => sig(v.text)));
+    const agreement = (valids.length - (uniq.size - 1)) / valids.length;
+
+    let final = valids[0].text, judgeMeta = null;
+    if (agreement < 0.66) {
+      const judgePrompt =
+`次の候補から最良案を選び、必要なら短く合成して返してください。
+出力はJSON: {"winner":"grok|gemini|claude","reason":"...","final":"..."}。
+候補:
+- grok: ${grok.text || '(失敗)'}
+- gemini: ${gemini.text || '(失敗)'}
+- claude: ${claude.text || '(失敗)'}`;
+      const raw = await p.judge.chat(judgePrompt, { temperature: 0.0 });
+      const m = raw.match(/\{[\s\S]*\}$/);
+      if (m) {
+        try {
+          const j = JSON.parse(m[0]);
+          final = j.final || (valids.find(v => v.provider === j.winner)?.text) || final;
+          judgeMeta = { model: process.env.OPENAI_MODEL || 'gpt-4o-mini', reason: j.reason };
+        } catch (e) { /* JSON不正→黙ってフォールバック */ }
+      }
+    }
+
+    res.json({
+      final,
+      judge: judgeMeta,
+      candidates: [grok, gemini, claude].map(x => ({
+        provider: x.provider, ok: x.ok, text: x.text, error: x.error
+      })),
+      metrics: { agreement_ratio: Number(agreement.toFixed(2)) }
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: String(e) });
+  }
+});
+/* ------------------------------------------------------------- */

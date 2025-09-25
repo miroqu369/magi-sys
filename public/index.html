@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAGI System - Multi-AI Gateway</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #333;
+            margin: 0;
+        }
+        .input-section {
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: vertical;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+            font-size: 18px;
+        }
+        .hidden {
+            display: none;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        .ai-response {
+            background: #e3f2fd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 3px solid #2196f3;
+        }
+        .final-answer {
+            background: #e8f5e8;
+            border-left-color: #4caf50;
+        }
+        .final-answer pre {
+            white-space: pre-wrap;
+            font-family: inherit;
+            margin: 0;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🧠 MAGI System</h1>
+            <p>Multi-Agent Generative Intelligence System</p>
+            <p><small>Grok合議 + OpenAI判断モード</small></p>
+        </header>
+        
+        <div class="input-section">
+            <textarea id="questionInput" placeholder="質問を入力してください..."></textarea>
+            <button id="submitBtn" onclick="submitQuery()">質問送信</button>
+        </div>
+        
+        <div id="loading" class="loading hidden">
+            <p>🤖 MAGI合議システムが分析中...</p>
+        </div>
+        
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        async function submitQuery() {
+            const question = document.getElementById('questionInput').value.trim();
+            if (!question) {
+                alert('質問を入力してください');
+                return;
+            }
+            
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            loading.classList.remove('hidden');
+            submitBtn.disabled = true;
+            results.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                results.innerHTML = `
+                    <div class="result-card">
+                        <h3>🎯 質問</h3>
+                        <p>${data.question}</p>
+                    </div>
+                    
+                    <div class="result-card">
+                        <h3>🤖 各AIの合議</h3>
+                        <div class="ai-response">
+                            <strong>MELCHIOR (Gemini - 科学):</strong><br>
+                            ${data.responses.melchior || 'MELCHIOR処理中...'}
+                        </div>
+                        <div class="ai-response">
+                            <strong>BALTHASAR (Grok - 創造):</strong><br>
+                            ${data.responses.balthasar || 'BALTHASAR処理中...'}
+                        </div>
+                        <div class="ai-response">
+                            <strong>CASPER (Claude - 人間):</strong><br>
+                            ${data.responses.casper || 'CASPER処理中...'}
+                        </div>
+                    </div>
+                    
+                    <div class="result-card final-answer">
+                        <h3>⚖️ OpenAI 最終判断</h3>
+                        <pre>${data.finalAnswer}</pre>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                results.innerHTML = `<div class="error">エラーが発生しました: ${error.message}</div>`;
+            }
+            
+            loading.classList.add('hidden');
+            submitBtn.disabled = false;
+        }
+    </script>
+</body>
+</html>

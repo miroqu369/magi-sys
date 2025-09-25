@@ -1,0 +1,51 @@
+const express = require('express');
+const path = require('path');
+const app = express();
+const PORT = process.env.PORT || 8081;
+
+app.use(express.static('public'));
+app.use(express.json());
+
+// テスト用のモックレスポンス
+app.post('/api/query', async (req, res) => {
+    const { question } = req.body;
+    
+    // モックレスポンス
+    const mockResponses = {
+        openai: `OpenAI回答: ${question}について詳しく説明します。これはテスト用のモック回答です。`,
+        gemini: `Gemini回答: ${question}に関して、別の視点から説明すると、これもテスト用のモック回答です。`,
+        anthropic: `Claude回答: ${question}について考察すると、これはテスト用のモック回答です。`
+    };
+    
+    // 最終回答の生成
+    const finalAnswer = `MAGIシステムテスト結果:
+
+質問: ${question}
+
+複数AIによる統合回答:
+${mockResponses.openai}
+
+${mockResponses.gemini}
+
+${mockResponses.anthropic}
+
+【結論】
+これは正常に動作しているMAGIシステムのテストバージョンです。すべてのコンポーネントが正常に動作しています。`;
+
+    res.json({
+        question,
+        responses: mockResponses,
+        finalAnswer,
+        metadata: {
+            timestamp: new Date().toISOString(),
+            providers: ['openai', 'gemini', 'anthropic'],
+            mode: 'test'
+        }
+    });
+});
+
+app.listen(PORT, () => {
+    console.log(`=== MAGIシステム（テストモード）がポート${PORT}で起動中 ===`);
+    console.log(`ブラウザでアクセス: https://8081-cs-***.cloudshell.dev/`);
+    console.log('Cloud Shell Editor > ウェブでプレビュー > ポート8081でプレビュー');
+});
