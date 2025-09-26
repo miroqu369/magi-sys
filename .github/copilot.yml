@@ -1,0 +1,25 @@
+# GitHub Copilot configuration
+version: 1
+enable:
+  - javascript
+  - typescript
+  - python
+  - shell
+
+# Enable Copilot features
+features:
+  suggestions: true
+  explanations: true
+  tests: true
+  refactoring: true
+  
+# Configure behavior
+behavior:
+  suggestCodeReviews: true
+  enableAutoComplete: true
+  
+# Configure for MAGI system
+custom:
+  projectType: "ai-consensus-system"
+  framework: "nodejs"
+  testFramework: "jest"
