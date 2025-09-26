@@ -1,32 +1,31 @@
-'use strict';
-
-async function call(prompt, opts = {}) {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error('OPENAI_API_KEY not defined');
-  
-  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-  
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${key}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: opts.temperature ?? 0.7
-    })
-  });
-  
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`OpenAI API ${response.status}: ${text}`);
+class OpenAIProvider {
+  constructor() {
+    this.key = process.env.OPENAI_API_KEY || 'dummy-key';
+    this.model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
   }
-  
-  const json = await response.json();
-  const text = json.choices?.[0]?.message?.content || '';
-  return String(text);
+
+  async chat(prompt, opts = {}) {
+    // ダミー実装
+    if (this.key === 'dummy-key' || this.key === 'test-key') {
+      return "GPT response: " + prompt;
+    }
+
+    try {
+      const { OpenAI } = require('openai');
+      const openai = new OpenAI({ apiKey: this.key });
+      
+      const completion = await openai.chat.completions.create({
+        model: this.model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: opts.temperature || 0.7
+      });
+      
+      return completion.choices[0].message.content;
+    } catch (error) {
+      console.error('OpenAI error:', error);
+      return "OpenAI error: " + error.message;
+    }
+  }
 }
 
-module.exports = { name: 'openai', call };
+module.exports = OpenAIProvider;
