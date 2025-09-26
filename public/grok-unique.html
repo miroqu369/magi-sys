@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grok Unique</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+        }
+        h1 { color: #667eea; text-align: center; }
+        .mode-btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: 2px solid #667eea;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            margin: 20px 0;
+            min-height: 120px;
+            font-size: 16px;
+        }
+        .submit-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin: 0 auto;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" style="color: #667eea; text-decoration: none;">← トップに戻る</a>
+        <h1>🚀 Grok Unique Mode</h1>
+        <p style="text-align: center; color: #666;">合議を超えた、Grokの独自視点</p>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="mode-btn active" onclick="selectMode(this, 'creative')">🎨 Creative</button>
+            <button class="mode-btn" onclick="selectMode(this, 'critical')">🔍 Critical</button>
+            <button class="mode-btn" onclick="selectMode(this, 'synthesis')">🔮 Synthesis</button>
+            <button class="mode-btn" onclick="selectMode(this, 'humorous')">😄 Humorous</button>
+            <button class="mode-btn" onclick="selectMode(this, 'practical')">🔧 Practical</button>
+        </div>
+        
+        <textarea id="prompt" placeholder="Grokに聞きたいことを入力してください..."></textarea>
+        
+        <button class="submit-btn" onclick="submitQuery()">Grokに聞く</button>
+        
+        <div id="result" class="result"></div>
+    </div>
+    
+    <script>
+        let selectedMode = 'creative';
+        
+        function selectMode(btn, mode) {
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedMode = mode;
+        }
+        
+        async function submitQuery() {
+            const prompt = document.getElementById('prompt').value;
+            if (!prompt) {
+                alert('質問を入力してください');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '⏳ Grokが考えています...';
+            
+            try {
+                const response = await fetch('/api/grok-unique', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        mode: selectedMode,
+                        meta: {include_analysis: true}
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3 style="color: #667eea;">Grok's ${selectedMode.toUpperCase()} Response:</h3>
+                        <p>${data.grok_response || 'No response available'}</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p style="color: red;">Error: ${data.error || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
