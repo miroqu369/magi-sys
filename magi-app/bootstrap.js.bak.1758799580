@@ -1,5 +1,4 @@
 'use strict';
-const __MAGI_mount = require("../routes/enforce-consensus");
 const express = require('express');
 
 // 1) 単一app
@@ -66,27 +65,3 @@ global.app.get('/__routes', (_req, res) => {
   });
   res.json({ routes: list });
 });
-
-// === MAGI enforce hook (Mary-judge /api/consensus) ===
-try { if (global.app) __MAGI_mount(global.app); } catch(e) { console.error(e); }
-
-// === MAGI /api/consensus (Mary裁定) 直書き ===
-try {
-  const bodyParser = require('body-parser');
-  const runConsensus = require('../consensus');
-  if (global.app?.use) global.app.use(bodyParser.json({ limit: '1mb' }));
-  if (global.app?.post) {
-    global.app.post('/api/consensus', async (req, res) => {
-      try {
-        const prompt = req.body?.prompt || '';
-        const meta   = req.body?.meta   || {};
-        const out = await runConsensus(prompt, meta);
-        res.set('X-MAGI-Route', 'magi-app/bootstrap.js');
-        res.json(out);
-      } catch (e) {
-        console.error('consensus error', e);
-        res.status(500).json({ error: 'consensus_failed', message: String(e?.message || e) });
-      }
-    });
-  }
-} catch (e) { console.error('mount /api/consensus in magi-app/bootstrap.js failed', e); }

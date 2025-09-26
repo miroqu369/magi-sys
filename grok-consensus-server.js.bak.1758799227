@@ -1,6 +1,5 @@
 // MAGIシステム - 各AIクライアントのインポートと初期化
 const __MAGI_mount = require("./routes/enforce-consensus");
-const __MAGI_mount = require("./routes/enforce-consensus");
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Groq = require('groq-sdk');
 const OpenAI = require('openai');
@@ -160,9 +159,6 @@ app.listen(PORT, () => {
     console.log(`│ MODE: Consensus → Judgment          │`);
     console.log(`└─────────────────────────────────────┘`);
 });
-
-// === MAGI enforce hook (always mount latest consensus route) ===
-try { if (typeof app !== 'undefined') __MAGI_mount(app); } catch(e) {}
 
 // === MAGI enforce hook (always mount latest consensus route) ===
 try { if (typeof app !== 'undefined') __MAGI_mount(app); } catch(e) {}

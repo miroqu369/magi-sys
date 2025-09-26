@@ -1,73 +1,32 @@
-const https = require('https');
+'use strict';
 
-class OpenAIProvider {
-  constructor(apiKey) {
-    this.apiKey = apiKey;
-    this.name = 'Melchior';
-    this.model = 'gpt-4o-mini';
+async function call(prompt, opts = {}) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error('OPENAI_API_KEY not defined');
+  
+  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${key}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: opts.temperature ?? 0.7
+    })
+  });
+  
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`OpenAI API ${response.status}: ${text}`);
   }
-
-  async query(prompt) {
-    try {
-      console.log(`[MAGI-${this.name}] Processing query...`);
-      
-      const data = JSON.stringify({
-        model: this.model,
-        messages: [{
-          role: 'user',
-          content: prompt
-        }],
-        max_tokens: 1000,
-        temperature: 0.7
-      });
-
-      const options = {
-        hostname: 'api.openai.com',
-        path: '/v1/chat/completions',
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-          'Content-Length': data.length
-        }
-      };
-
-      return new Promise((resolve, reject) => {
-        const req = https.request(options, (res) => {
-          let body = '';
-          res.on('data', (chunk) => body += chunk);
-          res.on('end', () => {
-            try {
-              const response = JSON.parse(body);
-              if (response.choices && response.choices[0]) {
-                resolve({
-                  provider: this.name,
-                  response: response.choices[0].message.content,
-                  confidence: 0.85,
-                  status: 'success'
-                });
-              } else {
-                reject(new Error('Invalid OpenAI response'));
-              }
-            } catch (error) {
-              reject(error);
-            }
-          });
-        });
-
-        req.on('error', reject);
-        req.write(data);
-        req.end();
-      });
-    } catch (error) {
-      return {
-        provider: this.name,
-        response: `Error: ${error.message}`,
-        confidence: 0.0,
-        status: 'error'
-      };
-    }
-  }
+  
+  const json = await response.json();
+  const text = json.choices?.[0]?.message?.content || '';
+  return String(text);
 }
 
-module.exports = OpenAIProvider;
+module.exports = { name: 'openai', call };

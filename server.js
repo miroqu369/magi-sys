@@ -1,98 +1,40 @@
 'use strict';
+
 const app = global.app;
 
 if (!app) {
-  throw new Error('global.app is not defined. bootstrap.js must run first!');
+  throw new Error('[server.js] global.app is not defined');
 }
 
-/* === callChat fallback (utilsが無くても動く) === */
-let callChat;
-try {
-  const u = require('./utils/callChat');
-  if (u && typeof u.callChat === 'function') callChat = u.callChat;
-} catch {}
-if (!callChat) {
-  const openai    = require('./providers/openai');
-  const gemini    = require('./providers/gemini');
-  const grok      = require('./providers/grok');
-  const anthropic = require('./providers/anthropic');
-  callChat = async (provider, prompt, meta = {}) => {
-    const messages    = [{ role: 'user', content: prompt }];
-    const temperature = meta?.temperature ?? 0.2;
-    const timeoutMs   = meta?.timeout_ms ?? 25000;
-    switch (provider) {
-      case 'grok':      return grok.chat({      model: process.env.XAI_MODEL       || 'grok-2',                    messages, temperature, timeoutMs });
-      case 'gemini':    return gemini.chat({    model: process.env.GEMINI_MODEL    || 'gemini-1.5-pro',           messages, temperature, timeoutMs });
-      case 'anthropic': return anthropic.chat({ model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514', messages, temperature, timeoutMs });
-      case 'openai':    return openai.chat({    model: process.env.OPENAI_MODEL    || 'gpt-4o-mini',              messages, temperature, timeoutMs });
-      default: throw new Error(`Unsupported provider: ${provider}`);
-    }
-  };
-}
-/* === end fallback === */
+console.log('[server.js] Loading consensus module...');
+const { runConsensus } = require('./consensus.js');
+console.log('[server.js] Consensus module loaded successfully');
 
-// ---- consensus ----
+// /api/consensus エンドポイント
 app.post('/api/consensus', async (req, res) => {
   try {
-    const { prompt, meta = {} } = req.body || {};
-    if (!prompt || typeof prompt !== 'string') {
-      return res.status(400).json({ error: 'prompt (string) is required' });
-    }
-
-    console.log(`[Consensus] Prompt: ${prompt.substring(0, 50)}...`);
-
-    const results = await Promise.allSettled([
-      callChat('grok', prompt, meta),
-      callChat('gemini', prompt, meta),
-      callChat('anthropic', prompt, meta),
-    ]);
+    console.log('[api/consensus] Request received:', JSON.stringify(req.body));
     
-    const providers = ['grok','gemini','anthropic'];
-    const candidates = results.map((r, i) =>
-      r.status === 'fulfilled'
-        ? { provider: providers[i], text: String(r.value || '').trim() }
-        : { provider: providers[i], error: String(r.reason?.message || r.reason || 'failed') }
-    );
-
-    console.log(`[Consensus] Results: ${candidates.map(c => c.provider + ':' + (c.text ? 'OK' : 'FAIL')).join(', ')}`);
-
-    const texts = candidates.filter(c => c.text).map(c => c.text);
-    let agreement_ratio = 0;
-    if (texts.length >= 2) {
-      const base = texts[0];
-      agreement_ratio = texts.filter(t => t === base).length / texts.length;
-    } else if (texts.length === 1) {
-      agreement_ratio = 1;
+    const { prompt, meta = {} } = req.body;
+    
+    if (!prompt) {
+      console.log('[api/consensus] Missing prompt');
+      return res.status(400).json({ error: 'prompt is required' });
     }
 
-    let final = texts[0] || '';
-    let judge = null;
-
-    if (agreement_ratio < 0.66 && texts.length > 0) {
-      try {
-        const judged = await callChat(
-          'openai',
-          `以下の候補から最良の一つを短く選び、必要なら軽く要約して返してください（事実整合・網羅・簡潔を重視）。\n\n` +
-          candidates.map((c, i) => `(${i+1}) [${c.provider}] ${c.text || c.error || 'N/A'}`).join('\n'),
-          meta
-        );
-        if (judged) { 
-          final = String(judged).trim(); 
-          judge = 'openai';
-          console.log('[Consensus] Judge: openai selected');
-        }
-      } catch (judgeErr) { 
-        console.error('[Consensus] Judge error:', judgeErr.message);
-      }
-    }
-
-    res.json({ final, judge, candidates, metrics: { agreement_ratio } });
-  } catch (e) {
-    console.error('[Consensus] Error:', e);
-    res.status(500).json({ error: String(e.message || e) });
+    console.log('[api/consensus] Calling runConsensus...');
+    const result = await runConsensus(prompt, meta);
+    console.log('[api/consensus] Result:', JSON.stringify(result));
+    
+    res.json(result);
+  } catch (error) {
+    console.error('[api/consensus] Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
-console.log('✓ /api/consensus route registered on global.app');
-
-module.exports = app;
+console.log('[server.js] Routes registered successfully');

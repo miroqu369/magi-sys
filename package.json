@@ -1,15 +1,14 @@
 {
-  "name": "magi-app",
+  "name": "magi-system",
   "version": "1.0.0",
-  "private": true,
-  "main": "server.js",
+  "main": "bootstrap.js",
   "scripts": {
     "start": "node bootstrap.js"
   },
   "dependencies": {
-    "express": "^4.21.2",
-    "morgan": "^1.10.0",
-    "google-auth-library": "^9.15.1",
-    "node-fetch": "^3.3.2"
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

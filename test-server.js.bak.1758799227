@@ -1,6 +1,5 @@
 const express = require('express');
 const __MAGI_mount = require("./routes/enforce-consensus");
-const __MAGI_mount = require("./routes/enforce-consensus");
 const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 8081;
@@ -51,9 +50,6 @@ app.listen(PORT, () => {
     console.log(`ブラウザでアクセス: https://8081-cs-***.cloudshell.dev/`);
     console.log('Cloud Shell Editor > ウェブでプレビュー > ポート8081でプレビュー');
 });
-
-// === MAGI enforce hook (always mount latest consensus route) ===
-try { if (typeof app !== 'undefined') __MAGI_mount(app); } catch(e) {}
 
 // === MAGI enforce hook (always mount latest consensus route) ===
 try { if (typeof app !== 'undefined') __MAGI_mount(app); } catch(e) {}

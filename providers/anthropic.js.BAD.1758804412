@@ -1,0 +1,54 @@
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20240620';
+const API_KEY = process.env.ANTHROPIC_API_KEY;
+if (!API_KEY) console.warn('[anthropic] ANTHROPIC_API_KEY not set');
+
+async function call({ prompt, temperature = 0.2 }) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 1024,
+      temperature,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  const j = await res.json();
+
+  // Claudeの形式に全部対応して「必ず文字列」を作る
+  let text = '';
+  if (Array.isArray(j?.content)) {
+    text = j.content
+      .map(part => {
+        if (!part) return '';
+        if (typeof part === 'string') return part;
+        if (typeof part.text === 'string') return part.text;
+        if (Array.isArray(part?.content)) {
+          return part.content.map(x => x?.text || '').join('\n');
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n');
+  } else if (typeof j?.output_text === 'string') {
+    text = j.output_text;
+  } else if (typeof j?.content === 'string') {
+    text = j.content;
+  } else if (typeof j?.message?.content === 'string') {
+    text = j.message.content;
+  } else if (Array.isArray(j?.message?.content)) {
+    text = j.message.content.map(c => c?.text || '').join('\n');
+  } else {
+    // 最後の砦：JSON文字列化
+    text = JSON.stringify(j);
+  }
+
+  return { provider: 'anthropic', text: String(text || '') };
+}
+
+module.exports = { name: 'anthropic', call };

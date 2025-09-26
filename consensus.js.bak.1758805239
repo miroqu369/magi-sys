@@ -1,0 +1,106 @@
+/**
+ * 合議 → Mary(=OpenAI) が候補のみを根拠に最終採択
+ */
+const registry = require('./providers/registry');
+
+function buildMaryPromptReferenceOnly(userPrompt, responses, metrics = {
+
+}) {// decision.js に同等がある場合も、ここで内包しておけば依存切れを回避できる
+  const lines = (responses || []).map(r => `- ${r.name || r.provider}: ${r.text}`).join('\n');
+  return `
+あなたは「Mary」という審判です。あなたの唯一の役割は、下記の候補回答のみを根拠に、中立に最終結論を採択することです。
+禁止: あなた自身の新情報・独自意見の追加、裏取りのない推測。
+許可: 候補の要点統合（候補内の内容に限定）。ユーザー質問は参照用であり、結論は必ず候補回答の範囲から選択／統合してください。
+
+【参考（質問文。参照のみ／根拠化禁止）】
+${userPrompt || '(なし)'}
+
+【候補回答（根拠として使用可）】
+${lines}
+
+【参考メトリクス（任意参照）】
+- 合意率: ${metrics.agreementRatio ?? 'N/A'}
+- エントロピー: ${metrics.entropy ?? 'N/A'}
+
+出力は必ず JSON のみ:
+{
+ "final_answer": "...",            // 候補から選択 or 候補内の要点を統合
+ "reason": "...",                  // どの候補のどの根拠か（候補名を明記）
+ "confidence": "high|medium|low"
+}
+`.trim();
+}
+
+function safeParseJSON(s) {
+  try { return JSON.parse(s); } catch(_) { return null; }
+}
+
+async function callProvider(providerName, prompt, options={}) {
+  const p = registry[providerName];
+  if (!p || typeof p.call !== 'function') throw new Error(`provider ${providerName} missing`);
+  const resp = await p.call({ prompt, model: options.model, temperature: options.temperature });
+  const text = (resp && resp.text) ? String(resp.text) : String(resp || '');
+  return { provider: providerName, text };
+}
+
+/**
+ * 合議本体
+ * meta: { temperature, mode } など
+ */
+module.exports = async function runConsensus(userPrompt, meta = {}) {
+  const temperature = typeof meta.temperature === 'number' ? meta.temperature : 0.2;
+
+  // 1) 複数LLMへ問い合わせ（ここは既存プロバイダ名に合わせて）
+  const candidates = [];
+  for (const name of ['grok', 'gemini', 'anthropic']) {
+    try {
+      const r = await callProvider(name, userPrompt, { temperature });
+      candidates.push({ name, text: r.text });
+    } catch(e) {
+      candidates.push({ name, text: `(error: ${e.message || e})` });
+    }
+  }
+
+  // 簡易メトリクス（将来用）
+  const metrics = { agreementRatio: null, entropy: null };
+
+  // 2) Mary 用プロンプト生成
+  const jp = buildMaryPromptReferenceOnly(userPrompt, candidates, metrics);console.log("[Candidates]", JSON.stringify(candidates));console.log("[Candidates]", JSON.stringify(candidates));// 3) Mary を呼ぶ（OpenAI）
+  let maryRaw = '';
+  try {
+    const mary = await callProvider('openai', jp, { temperature: 0.1 });
+    maryRaw = mary.text;
+  } catch(e) {
+    maryRaw = '';
+  }
+
+  // 4) JSON 解析 → 失敗時フォールバック（候補の1つ目）
+  const parsed = safeParseJSON(maryRaw);
+  const final_answer = parsed?.final_answer || null;
+  const reason = parsed?.reason || (parsed ? null : 'Mary JSON parse failed');
+  const confidence = parsed?.confidence || null;
+
+  if (final_answer) {
+    return {
+      final: final_answer,
+      final_answer,
+      reason,
+      confidence,
+      judge: 'Mary',
+      candidates: candidates.map(c => ({ provider: c.name, text: c.text })),
+      metrics: { agreement_ratio: metrics.agreementRatio, entropy: metrics.entropy }
+    };
+  } else {
+    // フォールバック（最初の候補を返す）
+    const fallback = candidates.find(c => c && c.text) || { name: 'none', text: '' };
+    return {
+      final: fallback.text || null,
+      final_answer: fallback.text || null,
+      reason: reason || `fallback from ${fallback.name}`,
+      confidence: 'low',
+      judge: 'Mary',
+      candidates: candidates.map(c => ({ provider: c.name, text: c.text })),
+      metrics: { agreement_ratio: metrics.agreementRatio, entropy: metrics.entropy }
+    };
+  }
+};

@@ -1,0 +1,67 @@
+'use strict';
+const __MAGI_mount = require("./routes/enforce-consensus");
+const express = require('express');
+
+// 1) 単一app
+global.app = express();
+global.app.use(express.json({ limit: '1mb' }));
+
+// 2) 先に基盤ルート
+global.app.get('/healthz', (_req, res) => res.status(200).send('ok'));
+global.app.get('/status', (_req, res) => {
+  res.json({
+    service: 'magi-app',
+    time: new Date().toISOString(),
+    secrets: {
+      OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+      GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
+      XAI_API_KEY: !!process.env.XAI_API_KEY,
+      ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY
+    },
+    models: {
+      OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-1.5-pro',
+      ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
+      XAI_MODEL: process.env.XAI_MODEL || 'grok-2'
+    }
+  });
+});
+
+// 3) アプリ本体読込
+try { 
+  require('./routes-introspect');
+    require('./server.js'); 
+  console.log('server.js loaded successfully');
+} catch (e) { 
+  console.error('server.js load error:', e); 
+}
+
+// 4) listenはここだけ
+const port = Number(process.env.PORT) || 8080;
+global.app.listen(port, '0.0.0.0', () => console.log(`bootstrap listening :${port}`));
+
+// ルート一覧を JSON で返す（運用確認用）
+
+// === MAGI enforce hook (Mary-judge /api/consensus) ===
+try { if (global.app) __MAGI_mount(global.app); } catch(e) { console.error(e); }
+
+// === MAGI /api/consensus (Mary裁定) 直書き ===
+try {
+  const bodyParser = require('body-parser');
+  const runConsensus = require('./consensus');
+  if (global.app?.use) global.app.use(bodyParser.json({ limit: '1mb' }));
+  if (global.app?.post) {
+    global.app.post('/api/consensus', async (req, res) => {
+      try {
+        const prompt = req.body?.prompt || '';
+        const meta   = req.body?.meta   || {};
+        const out = await runConsensus(prompt, meta);
+        res.set('X-MAGI-Route', 'bootstrap.js');
+        res.json(out);
+      } catch (e) {
+        console.error('consensus error', e);
+        res.status(500).json({ error: 'consensus_failed', message: String(e?.message || e) });
+      }
+    });
+  }
+} catch (e) { console.error('mount /api/consensus in bootstrap.js failed', e); }

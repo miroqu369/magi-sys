@@ -7,7 +7,7 @@ global.app.use(express.json({ limit: '1mb' }));
 
 // 2) 先に基盤ルート
 global.app.get('/healthz', (_req, res) => res.status(200).send('ok'));
-global.app.get('/status',  (_req, res) => {
+global.app.get('/status', (_req, res) => {
   res.json({
     service: 'magi-app',
     time: new Date().toISOString(),
@@ -16,21 +16,27 @@ global.app.get('/status',  (_req, res) => {
       GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
       XAI_API_KEY: !!process.env.XAI_API_KEY,
       ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY
+    },
+    models: {
+      OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-1.5-pro',
+      ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
+      XAI_MODEL: process.env.XAI_MODEL || 'grok-2'
     }
   });
 });
 
 // 3) アプリ本体読込
 try { 
-  require('./server.js'); 
-  console.log('[bootstrap] server.js loaded successfully');
+  require('./routes-introspect');
+    require('./server.js'); 
+  console.log('server.js loaded successfully');
 } catch (e) { 
-  console.error('[bootstrap] server.js load error:', e.message);
-  console.error(e.stack);
+  console.error('server.js load error:', e); 
 }
 
 // 4) listenはここだけ
 const port = Number(process.env.PORT) || 8080;
-global.app.listen(port, '0.0.0.0', () => {
-  console.log(`[bootstrap] listening on 0.0.0.0:${port}`);
-});
+global.app.listen(port, '0.0.0.0', () => console.log(`bootstrap listening :${port}`));
+
+// ルート一覧を JSON で返す（運用確認用）
