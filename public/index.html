@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>MAGI System</title>
+    <style>
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            text-shadow: 0 0 10px #0f0;
+        }
+        .status {
+            border: 1px solid #0f0;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            background: #111;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 10px;
+        }
+        button {
+            background: #000;
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #0f0;
+            color: #000;
+        }
+        .result {
+            border: 1px solid #0f0;
+            padding: 15px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>M.A.G.I SYSTEM</h1>
+    <div class="status" id="status">Loading...</div>
+    <textarea id="prompt" placeholder="質問を入力してください"></textarea>
+    <button onclick="execute()">Execute Consensus</button>
+    <div class="result" id="result"></div>
+    
+    <script>
+        fetch('/status')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('status').textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(e => {
+                document.getElementById('status').textContent = 'Error: ' + e;
+            });
+        
+        async function execute() {
+            const prompt = document.getElementById('prompt').value;
+            if (!prompt) {
+                alert('質問を入力してください');
+                return;
+            }
+            
+            const result = document.getElementById('result');
+            result.textContent = 'Processing...';
+            
+            try {
+                const response = await fetch('/api/consensus', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+                const data = await response.json();
+                result.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                result.textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

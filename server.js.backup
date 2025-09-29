@@ -1,0 +1,220 @@
+'use strict';
+const app = global.app || require('express')();
+
+console.log('Loading server.js routes...');
+
+// Providerクラスの定義（インライン版）
+class GrokProvider {
+    constructor() {
+        this.key = process.env.XAI_API_KEY;
+        this.base = process.env.XAI_BASE_URL || 'https://api.x.ai/v1';
+        this.model = process.env.XAI_MODEL || 'grok-2';
+    }
+
+    async ping() {
+        if (!this.key) return false;
+        try {
+            const resp = await fetch(`${this.base}/models`, {
+                headers: { 'Authorization': `Bearer ${this.key}` }
+            });
+            return resp.ok;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    async chat(prompt, opts = {}) {
+        if (!this.key) throw new Error('XAI_API_KEY not configured');
+        const body = {
+            model: this.model,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: opts.temperature ?? 0.2
+        };
+        const resp = await fetch(`${this.base}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.key}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        return data.choices?.[0]?.message?.content || '';
+    }
+}
+
+class GeminiProvider {
+    constructor() {
+        this.key = process.env.GEMINI_API_KEY;
+    }
+
+    async chat(prompt, opts = {}) {
+        if (!this.key) throw new Error('GEMINI_API_KEY not configured');
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${this.key}`;
+        const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    temperature: opts.temperature ?? 0.2,
+                    maxOutputTokens: 2048
+                }
+            })
+        });
+        const data = await resp.json();
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+}
+
+class AnthropicProvider {
+    constructor() {
+        this.key = process.env.ANTHROPIC_API_KEY;
+        this.model = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
+    }
+
+    async chat(prompt, opts = {}) {
+        if (!this.key) throw new Error('ANTHROPIC_API_KEY not configured');
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'x-api-key': this.key,
+                'anthropic-version': '2023-06-01',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: this.model,
+                max_tokens: 2048,
+                temperature: opts.temperature ?? 0.2,
+                messages: [{ role: 'user', content: prompt }]
+            })
+        });
+        const data = await resp.json();
+        return data.content?.[0]?.text || '';
+    }
+}
+
+class OpenAIProvider {
+    constructor() {
+        this.key = process.env.OPENAI_API_KEY;
+        this.model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    }
+
+    async chat(prompt, opts = {}) {
+        if (!this.key) throw new Error('OPENAI_API_KEY not configured');
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.key}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: this.model,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: opts.temperature ?? 0.2
+            })
+        });
+        const data = await resp.json();
+        return data.choices?.[0]?.message?.content || '';
+    }
+}
+
+// Grok Pingエンドポイント
+app.post('/api/grok/ping', async (req, res) => {
+    try {
+        const provider = new GrokProvider();
+        const result = await provider.ping();
+        res.json({ ok: result, provider: 'grok' });
+    } catch (error) {
+        res.status(500).json({ ok: false, error: error.message });
+    }
+});
+
+// Consensusエンドポイント
+app.post('/api/consensus', async (req, res) => {
+    try {
+        const { prompt, meta = {} } = req.body;
+        if (!prompt) {
+            return res.status(400).json({ error: 'prompt is required' });
+        }
+
+        const temperature = meta.temperature || 0.2;
+        const timeout_ms = meta.timeout_ms || 25000;
+
+        console.log(`Processing consensus for: ${prompt.substring(0, 50)}...`);
+
+        // 各プロバイダーで実行
+        const providers = [
+            { name: 'grok', instance: new GrokProvider() },
+            { name: 'gemini', instance: new GeminiProvider() },
+            { name: 'claude', instance: new AnthropicProvider() }
+        ];
+
+        // 並列実行
+        const promises = providers.map(({ name, instance }) => {
+            return new Promise((resolve) => {
+                const timer = setTimeout(() => {
+                    resolve({ provider: name, ok: false, error: 'timeout' });
+                }, timeout_ms);
+
+                instance.chat(prompt, { temperature })
+                    .then(text => {
+                        clearTimeout(timer);
+                        resolve({ provider: name, ok: true, text });
+                    })
+                    .catch(error => {
+                        clearTimeout(timer);
+                        resolve({ provider: name, ok: false, error: error.message });
+                    });
+            });
+        });
+
+        const candidates = await Promise.all(promises);
+
+        // 成功した回答を取得
+        const validTexts = candidates.filter(c => c.ok && c.text).map(c => c.text);
+        
+        // 最終回答を決定
+        let final = '';
+        let judge = null;
+        
+        if (validTexts.length === 0) {
+            final = 'すべてのモデルでエラーが発生しました。';
+        } else if (validTexts.length === 1) {
+            final = validTexts[0];
+        } else {
+            // 複数の回答がある場合、最も長い回答を選択（簡易版）
+            final = validTexts.reduce((a, b) => a.length > b.length ? a : b);
+        }
+
+        // 簡易的な一致度計算
+        let agreement_ratio = 0;
+        if (validTexts.length > 1) {
+            const firstWords = validTexts.map(t => t.substring(0, 50).toLowerCase());
+            let matches = 0;
+            for (let i = 0; i < firstWords.length - 1; i++) {
+                for (let j = i + 1; j < firstWords.length; j++) {
+                    if (firstWords[i] === firstWords[j]) matches++;
+                }
+            }
+            agreement_ratio = matches / (firstWords.length * (firstWords.length - 1) / 2);
+        }
+
+        res.json({
+            final,
+            judge,
+            candidates,
+            metrics: { 
+                agreement_ratio,
+                success_count: validTexts.length,
+                total_count: candidates.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Consensus error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+console.log('Server.js routes loaded');

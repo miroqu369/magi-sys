@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Environment variables
+.env
+.env.*
+
+# OS Files
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Test files
+test-*.sh
+check-*.sh
+*_old.js
+
+# Backups
+backup*/
+backups/
+
+# API Keys (重要)
+*api_key*
+*API_KEY*
+secrets/
+*.key
