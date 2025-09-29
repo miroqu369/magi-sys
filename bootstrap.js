@@ -5,7 +5,7 @@ app.use(express.static('public'));
 
 app.get('/status', (req, res) => {
   res.json({
-    service: 'MAGI System v2.0',
+    service: 'DOGMA System v2.0',
     mode: 'mock',
     units: ['BALTHASAR-2', 'MELCHIOR-1', 'CASPER-3']
   });
@@ -33,5 +33,5 @@ app.post('/api/consensus', (req, res) => {
 });
 
 app.listen(8081, () => {
-  console.log('MAGI System running on port 8081');
+  console.log('DOGMA System running on port 8081');
 });

@@ -1,5 +1,5 @@
 {
-  "name": "magi-system",
+  "name": "dogma-system",
   "version": "2.0.0",
   "description": "MAGI Consensus LLM System with GPT Integration Modes",
   "main": "bootstrap.js",
