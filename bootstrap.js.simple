@@ -1,0 +1,98 @@
+const express = require('express');
+const app = express();
+app.use(express.json());
+app.use(express.static('public'));
+
+app.get('/status', (req, res) => {
+  res.json({
+    service: 'MAGI System v2.0',
+    mode: 'mock',
+    units: ['BALTHASAR-2', 'MELCHIOR-1', 'CASPER-3'],
+    time: new Date().toISOString()
+  });
+});
+
+app.post('/api/consensus', (req, res) => {
+  const {prompt, meta = {}} = req.body;
+  const mode = meta.mode || 'consensus';
+  
+  // 各MAGIユニットの応答を生成
+  const grok = {
+    consensus: `Grok分析: ${prompt}について、創造的な視点から分析すると、これは人類の技術進化における重要な転換点を示しています。`,
+    integration: `Grok統合見解: ${prompt}の革新的側面を考慮すると、従来の枠組みを超えた新しいパラダイムが必要です。`,
+    synthesis: `Grok創発: ${prompt}に対して、量子的な視点から見ると全く新しい可能性が開けます。`
+  };
+  
+  const gemini = {
+    consensus: `Gemini分析: ${prompt}を論理的に分析すると、複数の要因が相互作用する複雑系であることが分かります。`,
+    integration: `Gemini統合見解: ${prompt}の科学的根拠を検証した結果、統計的に有意な相関が確認されました。`,
+    synthesis: `Gemini創発: ${prompt}について、数学的モデルを適用すると興味深いパターンが浮かび上がります。`
+  };
+  
+  const claude = {
+    consensus: `Claude分析: ${prompt}について、人間の視点から考えると、社会的影響と倫理的考慮が重要です。`,
+    integration: `Claude統合見解: ${prompt}の実用面を検討すると、段階的な実装が最も現実的です。`,
+    synthesis: `Claude創発: ${prompt}に対して、人間中心設計の原則を適用することで最適解が見つかります。`
+  };
+  
+  // 最終判定を生成
+  const finals = {
+    consensus: `【合議制判定】\n${prompt}についての分析結果：\n\n3つのMAGIユニットが高い一致度（85%）を示しました。\n結論：この問題は多面的アプローチが必要ですが、基本的な方向性は明確です。`,
+    integration: `【統合分析判定】\n${prompt}についての包括的分析：\n\n・創造的視点（BALTHASAR-2）：革新的アプローチの提案\n・論理的視点（MELCHIOR-1）：科学的根拠の確立\n・人間的視点（CASPER-3）：実用性と倫理の考慮\n\n統合結論：3つの視点を融合することで、バランスの取れた解決策が導出されました。`,
+    synthesis: `【創発的判定】\n${prompt}についての創発的洞察：\n\n3つのAIの相互作用により、単独では到達不可能な高次元の理解に至りました。\nこの問題は従来の二元論的思考を超えて、新たな認識枠組みの構築を必要とします。`
+  };
+  
+  const response = {
+    version: "2.0.0",
+    final: finals[mode],
+    mode: mode,
+    timestamp: new Date().toISOString(),
+    judge: {
+      model: "GPT-4 (Isabelle)",
+      method: mode,
+      confidence: mode === 'consensus' ? 0.85 : 0.75
+    },
+    candidates: [
+      {
+        magi_unit: 'BALTHASAR-2',
+        role: '創造的・革新的分析',
+        text: grok[mode],
+        confidence: 0.82
+      },
+      {
+        magi_unit: 'MELCHIOR-1',
+        role: '論理的・科学的分析',
+        text: gemini[mode],
+        confidence: 0.88
+      },
+      {
+        magi_unit: 'CASPER-3',
+        role: '人間的・感情的分析',
+        text: claude[mode],
+        confidence: 0.79
+      }
+    ],
+    metrics: {
+      agreement_ratio: mode === 'consensus' ? 0.85 : 0.60,
+      response_time_ms: 1500,
+      total_tokens: 2500
+    }
+  };
+  
+  // 遅延を入れて本物っぽく
+  setTimeout(() => res.json(response), 1000);
+});
+
+const port = process.env.PORT || 8081;
+app.listen(port, () => {
+  console.log(`
+╔═══════════════════════════════════════╗
+║       MAGI SYSTEM v2.0                ║
+║   Operational on port ${port}           ║
+╠═══════════════════════════════════════╣
+║  BALTHASAR-2: Creative Analysis       ║
+║  MELCHIOR-1:  Logical Analysis        ║
+║  CASPER-3:    Human Analysis          ║
+╚═══════════════════════════════════════╝
+  `);
+});
