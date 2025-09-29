@@ -43,3 +43,8 @@ curl -X POST https://magi-app-dtrah63zyq-an.a.run.app/api/consensus \
   -H "Content-Type: application/json" \
   -d '{"prompt": "質問", "meta": {"mode": "synthesis"}}'
 ```
+
+## UI Update (2025-09-29)
+- MAGI System visual interface implemented
+- Eva-style design with authentic NERV aesthetics
+- Real-time status display for all three AI units
