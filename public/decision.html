@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAGI Decision</title>
+    <style>
+        body { background: #000; color: #00ff00; font-family: monospace; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; text-align: center; }
+        h1 { color: #ff0000; margin-bottom: 30px; }
+        input { width: 100%; padding: 10px; background: #111; border: 2px solid #00ff00; color: #00ff00; margin-bottom: 20px; }
+        button { padding: 15px 30px; background: #111; border: 2px solid #ff0000; color: #ff0000; cursor: pointer; text-transform: uppercase; font-weight: bold; }
+        button:hover { background: #ff0000; color: #fff; }
+        .units { display: flex; justify-content: space-around; margin: 30px 0; }
+        .unit { border: 2px solid #333; padding: 20px; min-width: 150px; }
+        .unit.approved { border-color: #00ff00; color: #00ff00; }
+        .unit.denied { border-color: #ff0000; color: #ff0000; }
+        .result { font-size: 36px; margin-top: 30px; padding: 20px; border: 3px solid #fff; }
+        a { color: #00ff00; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/">← Back</a>
+        <h1>MAGI DECISION SYSTEM</h1>
+        <input type="text" id="prompt" placeholder="Enter your question...">
+        <button onclick="makeDecision()">EXECUTE DECISION</button>
+        <div class="units">
+            <div class="unit" id="unit1">
+                <div>BALTHASAR-2</div>
+                <div class="decision">待機中</div>
+            </div>
+            <div class="unit" id="unit2">
+                <div>MELCHIOR-1</div>
+                <div class="decision">待機中</div>
+            </div>
+            <div class="unit" id="unit3">
+                <div>CASPER-3</div>
+                <div class="decision">待機中</div>
+            </div>
+        </div>
+        <div class="result" id="result" style="display:none;"></div>
+    </div>
+    <script>
+        async function makeDecision() {
+            const prompt = document.getElementById('prompt').value;
+            if (!prompt) return;
+            
+            document.querySelectorAll('.unit').forEach(u => {
+                u.className = 'unit';
+                u.querySelector('.decision').textContent = '処理中...';
+            });
+            
+            try {
+                const response = await fetch('/api/decision', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({prompt: prompt})
+                });
+                
+                const data = await response.json();
+                
+                data.units.forEach((unit, i) => {
+                    const el = document.getElementById('unit' + (i+1));
+                    el.className = 'unit ' + (unit.decision === '承認' ? 'approved' : 'denied');
+                    el.querySelector('.decision').textContent = unit.decision;
+                });
+                
+                const result = document.getElementById('result');
+                result.style.display = 'block';
+                result.textContent = '最終決定: ' + data.final;
+                result.style.borderColor = data.final === '承認' ? '#00ff00' : '#ff0000';
+                
+            } catch(e) {
+                alert('Error: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>

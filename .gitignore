@@ -1,29 +1,37 @@
 # Dependencies
 node_modules/
+
+# Logs
+*.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Environment variables
 .env
-.env.*
+.env.local
+.env.*.local
 
-# OS Files
+# Backup files
+*.backup
+*.backup*
+*.bak
+*~
+
+# OS files
 .DS_Store
+Thumbs.db
 
-# IDE
+# IDE files
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # Test files
-test-*.sh
-check-*.sh
-*_old.js
+test/
+*.test.js
 
-# Backups
-backup*/
-backups/
-
-# API Keys (重要)
-*api_key*
-*API_KEY*
-secrets/
-*.key
+# Build files
+dist/
+build/

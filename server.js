@@ -1,14 +1,10 @@
 'use strict';
-const app = global.app;
-
 // プロバイダーをロード
 const GrokProvider = require('./providers/grok');
 const GeminiProvider = require('./providers/gemini');
 const AnthropicProvider = require('./providers/anthropic');
 const OpenAIProvider = require('./providers/openai');
-
 const SYSTEM_VERSION = '2.0.0';
-
 // /api/grok/ping - Grok疎通確認
 app.post('/api/grok/ping', async (req, res) => {
   try {
@@ -21,7 +17,6 @@ app.post('/api/grok/ping', async (req, res) => {
     res.status(500).json({ ok: false, error: error.message });
   }
 });
-
 // /api/consensus - 合議エンドポイント（v2.0）
 app.post('/api/consensus', async (req, res) => {
   const startTime = Date.now();
@@ -30,13 +25,10 @@ app.post('/api/consensus', async (req, res) => {
   if (!prompt) {
     return res.status(400).json({ error: 'prompt is required' });
   }
-
   const temperature = meta.temperature ?? 0.2;
   const timeout_ms = meta.timeout_ms ?? 25000;
   const mode = meta.mode ?? 'consensus';
-
   console.log(`[MAGI v${SYSTEM_VERSION}] Mode: ${mode.toUpperCase()}, Prompt: "${prompt.substring(0, 50)}..."`);
-
   try {
     // 3つのAIを並列実行
     const results = await Promise.allSettled([
@@ -44,7 +36,6 @@ app.post('/api/consensus', async (req, res) => {
       executeWithTimeout('gemini', () => new GeminiProvider().chat(prompt, { temperature }), timeout_ms),
       executeWithTimeout('claude', () => new AnthropicProvider().chat(prompt, { temperature }), timeout_ms)
     ]);
-
     const candidates = results.map((result, idx) => {
       const providers = ['grok', 'gemini', 'claude'];
       const magi_names = ['BALTHASAR-2', 'MELCHIOR-1', 'CASPER-3'];
@@ -68,7 +59,6 @@ app.post('/api/consensus', async (req, res) => {
         };
       }
     });
-
     // 一致度計算
     const validTexts = candidates.filter(c => c.ok).map(c => c.text);
     const agreementRatio = calculateAgreement(validTexts);
@@ -76,7 +66,6 @@ app.post('/api/consensus', async (req, res) => {
     let finalAnswer;
     let judgeInfo = null;
     let synthesisMethod = null;
-
     // モード別処理
     switch(mode) {
       case 'integration':
@@ -93,7 +82,6 @@ app.post('/api/consensus', async (req, res) => {
         };
         synthesisMethod = 'gpt_integration';
         break;
-
       case 'synthesis':
         console.log(`[Advanced Synthesis Mode]`);
         const synthesisResult = await synthesizeResponses(prompt, candidates);
@@ -108,7 +96,6 @@ app.post('/api/consensus', async (req, res) => {
         };
         synthesisMethod = 'advanced_synthesis';
         break;
-
       case 'consensus':
       default:
         if (agreementRatio >= 0.66) {
@@ -135,7 +122,6 @@ app.post('/api/consensus', async (req, res) => {
           synthesisMethod = 'gpt_arbitration';
         }
     }
-
     const totalTime = Date.now() - startTime;
     
     res.json({
@@ -152,7 +138,6 @@ app.post('/api/consensus', async (req, res) => {
         timestamp: new Date().toISOString()
       }
     });
-
   } catch (error) {
     console.error('Consensus error:', error);
     res.status(500).json({ 
@@ -161,7 +146,6 @@ app.post('/api/consensus', async (req, res) => {
     });
   }
 });
-
 // GPT-4統合関数
 async function integrateWithGPT(originalPrompt, candidates) {
   const openai = new OpenAIProvider();
@@ -173,7 +157,6 @@ ${candidates.map(c => `${c.magi_unit} (${c.role}): ${c.ok ? c.text : '[エラー
 【統合タスク】各回答の長所を活かし、包括的な回答を生成してください。
 【出力形式】必ず以下のJSON形式で回答:
 {"final": "統合された最終回答", "reason": "統合の根拠", "insights": ["洞察1", "洞察2"]}`;
-
   try {
     const response = await openai.chat(integrationPrompt, { temperature: 0.3 });
     const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -190,7 +173,6 @@ ${candidates.map(c => `${c.magi_unit} (${c.role}): ${c.ok ? c.text : '[エラー
     insights: []
   };
 }
-
 // 高度な合成関数
 async function synthesizeResponses(originalPrompt, candidates) {
   const openai = new OpenAIProvider();
@@ -202,7 +184,6 @@ ${candidates.map(c => `${c.magi_unit}: ${c.ok ? c.text : '[エラー]'}`).join('
 【創発的合成タスク】各ユニットの特性を融合させ、創発的な回答を生成。
 【出力形式】必ず以下のJSON形式で回答:
 {"final": "合成された回答", "reason": "合成プロセス", "insights": {"creative": "創造的洞察", "logical": "論理的洞察", "emotional": "感情的洞察"}}`;
-
   try {
     const response = await openai.chat(synthesisPrompt, { temperature: 0.4 });
     const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -219,7 +200,6 @@ ${candidates.map(c => `${c.magi_unit}: ${c.ok ? c.text : '[エラー]'}`).join('
     insights: {}
   };
 }
-
 // ユーティリティ関数
 async function executeWithTimeout(name, fn, timeout) {
   return Promise.race([
@@ -229,7 +209,6 @@ async function executeWithTimeout(name, fn, timeout) {
     )
   ]);
 }
-
 function calculateAgreement(texts) {
   if (texts.length < 2) return 0;
   
@@ -253,6 +232,28 @@ function calculateAgreement(texts) {
   
   return comparisons > 0 ? totalSimilarity / comparisons : 0;
 }
-
 console.log('✅ MAGI v2.0 server module loaded');
 module.exports = app;
+// ===============================================
+// ====== MAGI DECISION MODE (SINGLE) ======
+app.post('/api/decision', async (req, res) => {
+    console.log('[DECISION] Request received');
+    const { prompt } = req.body;
+    
+    if (!prompt) {
+        return res.status(400).json({ error: 'Prompt required' });
+    }
+    
+    const decision = prompt.toLowerCase().includes('should') ? '承認' : '否認';
+    
+    res.json({
+        final: decision,
+        reason: 'Test decision',
+        units: [
+            { magi_unit: 'BALTHASAR-2', decision: decision },
+            { magi_unit: 'MELCHIOR-1', decision: decision },
+            { magi_unit: 'CASPER-3', decision: decision }
+        ]
+    });
+});
+console.log('✅ Decision endpoint registered');
