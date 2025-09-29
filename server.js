@@ -1,5 +1,5 @@
 'use strict';
-const app = global.app || require('express')();
+const app = global.app;
 
 // プロバイダーをロード
 const GrokProvider = require('./providers/grok');
