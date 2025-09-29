@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MAGI DEBATE</title>
+<style>
+body{background:#000;color:#0f0;font-family:monospace;padding:20px}
+.header{font-size:32px;text-align:center;border:2px solid #0f0;padding:20px}
+.chat{border:2px solid #ff0;height:400px;overflow-y:auto;padding:10px;margin:20px 0}
+.msg{margin:10px 0;padding:10px;border-left:3px solid #0f0}
+.balthasar{border-color:#0f0}
+.melchior{border-color:#0ff}
+.casper{border-color:#ff0}
+input{width:60%;padding:10px}
+button{padding:10px 20px}
+</style>
+</head>
+<body>
+<div class="header">MAGI DEBATE MODE</div>
+<input id="q" placeholder="討論テーマ" value="AIの未来">
+<button onclick="debate()">討論開始</button>
+<div id="chat" class="chat"></div>
+<script>
+async function debate(){
+const q=document.getElementById('q').value;
+const c=document.getElementById('chat');
+c.innerHTML='';
+add('SYSTEM','討論開始: '+q,'');
+await sleep(1000);
+add('BALTHASAR','創造的観点から、'+q+'は革新的だ','balthasar');
+await sleep(1500);
+add('MELCHIOR','論理的には慎重に検討すべき','melchior');
+await sleep(1500);
+add('CASPER','人間性の観点から重要な課題だ','casper');
+await sleep(1500);
+add('SYSTEM','討論終了','');
+}
+function add(who,text,cls){
+const d=document.createElement('div');
+d.className='msg '+cls;
+d.innerHTML='<b>'+who+':</b> '+text;
+document.getElementById('chat').appendChild(d);
+}
+function sleep(ms){
+return new Promise(r=>setTimeout(r,ms));
+}
+</script>
+</body>
+</html>

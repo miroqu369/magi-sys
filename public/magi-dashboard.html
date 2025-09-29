@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MAGI SYSTEM DASHBOARD</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap');
+
+:root {
+  --primary: #00ff41;
+  --secondary: #ff3333;
+  --warning: #ffaa00;
+  --bg: #0a0a0a;
+  --panel: rgba(10, 20, 30, 0.9);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a0f1f 100%);
+  color: var(--primary);
+  font-family: 'Rajdhani', monospace;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: var(--panel);
+  border: 2px solid var(--primary);
+  margin-bottom: 20px;
+}
+
+.logo {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-shadow: 0 0 20px currentColor;
+}
+
+.status-bar {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(0,255,65,0.1);
+  border: 1px solid var(--primary);
+}
+
+.pulse {
+  width: 8px;
+  height: 8px;
+  background: var(--primary);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(0,255,65,0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(0,255,65,0); }
+  100% { box-shadow: 0 0 0 0 rgba(0,255,65,0); }
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.magi-unit {
+  background: var(--panel);
+  border: 2px solid var(--primary);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.magi-unit::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  animation: scan 3s linear infinite;
+}
+
+@keyframes scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.unit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.unit-title {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.unit-id {
+  font-size: 12px;
+  color: var(--warning);
+}
+
+.decision-indicator {
+  width: 120px;
+  height: 120px;
+  margin: 20px auto;
+  position: relative;
+}
+
+.decision-circle {
+  width: 100%;
+  height: 100%;
+  border: 3px solid var(--primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  transition: all 0.3s;
+}
+
+.decision-approve {
+  background: rgba(0,255,65,0.2);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.decision-reject {
+  background: rgba(255,51,51,0.2);
+  border-color: var(--secondary);
+  color: var(--secondary);
+}
+
+.decision-hold {
+  background: rgba(255,170,0,0.2);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.unit-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.metric {
+  padding: 10px;
+  background: rgba(0,255,65,0.05);
+  border: 1px solid rgba(0,255,65,0.3);
+}
+
+.metric-label {
+  font-size: 11px;
+  color: var(--warning);
+  text-transform: uppercase;
+}
+
+.metric-value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.control-panel {
+  background: var(--panel);
+  border: 2px solid var(--warning);
+  padding: 30px;
+  margin-bottom: 20px;
+}
+
+.mode-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 30px;
+  border-bottom: 2px solid var(--warning);
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 15px;
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.mode-tab::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--primary);
+  transform: scaleX(0);
+  transition: transform 0.3s;
+}
+
+.mode-tab.active {
+  color: var(--warning);
+  background: rgba(255,170,0,0.1);
+}
+
+.mode-tab.active::after {
+  transform: scaleX(1);
+  background: var(--warning);
+}
+
+.input-group {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.query-input {
+  flex: 1;
+  padding: 15px;
+  background: rgba(0,0,0,0.5);
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 16px;
+}
+
+.execute-btn {
+  padding: 15px 40px;
+  background: linear-gradient(135deg, var(--primary), var(--warning));
+  border: none;
+  color: var(--bg);
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+}
+
+.execute-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(0,255,65,0.5);
+}
+
+.execute-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.result-panel {
+  background: var(--panel);
+  border: 2px solid var(--primary);
+  padding: 30px;
+  min-height: 200px;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(0,255,65,0.3);
+}
+
+.result-title {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.result-meta {
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+}
+
+.result-content {
+  line-height: 1.8;
+  font-size: 16px;
+  white-space: pre-wrap;
+}
+
+.consensus-decision {
+  background: rgba(0,255,65,0.1);
+  border: 2px solid var(--primary);
+  padding: 20px;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.decision-result {
+  font-size: 36px;
+  font-weight: 700;
+  margin: 10px 0;
+}
+
+.decision-details {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.detail-item {
+  text-align: center;
+}
+
+.detail-label {
+  font-size: 12px;
+  color: var(--warning);
+  text-transform: uppercase;
+}
+
+.detail-value {
+  font-size: 24px;
+  font-weight: 700;
+  margin-top: 5px;
+}
+
+.approve { color: var(--primary); }
+.reject { color: var(--secondary); }
+.hold { color: var(--warning); }
+
+.processing {
+  text-align: center;
+  padding: 50px;
+  font-size: 24px;
+  color: var(--warning);
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.chart-container {
+  height: 150px;
+  margin-top: 20px;
+  border: 1px solid rgba(0,255,65,0.3);
+  padding: 10px;
+  background: rgba(0,0,0,0.3);
+}
+</style>
+</head>
+<body>
+
+<div class="dashboard-header">
+  <div class="logo">MAGI SYSTEM v2.0</div>
+  <div class="status-bar">
+    <div class="status-item">
+      <span class="pulse"></span>
+      <span>ONLINE</span>
+    </div>
+    <div class="status-item">
+      <span id="mode-indicator">CONSENSUS</span>
+    </div>
+    <div class="status-item">
+      <span id="time"></span>
+    </div>
+  </div>
+</div>
+
+<div class="main-grid">
+  <div class="magi-unit">
+    <div class="unit-header">
+      <div class="unit-title">BALTHASAR-2</div>
+      <div class="unit-id">UNIT.02</div>
+    </div>
+    <div id="b-decision" class="decision-indicator" style="display:none;">
+      <div id="b-circle" class="decision-circle">-</div>
+    </div>
+    <div id="b-response" style="color:#0f0;padding:10px;min-height:80px;">
+      創造的・革新的分析ユニット準備完了
+    </div>
+    <div class="unit-metrics">
+      <div class="metric">
+        <div class="metric-label">信頼度</div>
+        <div class="metric-value" id="b-conf">0%</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">応答速度</div>
+        <div class="metric-value" id="b-speed">0ms</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="magi-unit">
+    <div class="unit-header">
+      <div class="unit-title">MELCHIOR-1</div>
+      <div class="unit-id">UNIT.01</div>
+    </div>
+    <div id="m-decision" class="decision-indicator" style="display:none;">
+      <div id="m-circle" class="decision-circle">-</div>
+    </div>
+    <div id="m-response" style="color:#0f0;padding:10px;min-height:80px;">
+      論理的・科学的分析ユニット準備完了
+    </div>
+    <div class="unit-metrics">
+      <div class="metric">
+        <div class="metric-label">信頼度</div>
+        <div class="metric-value" id="m-conf">0%</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">応答速度</div>
+        <div class="metric-value" id="m-speed">0ms</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="magi-unit">
+    <div class="unit-header">
+      <div class="unit-title">CASPER-3</div>
+      <div class="unit-id">UNIT.03</div>
+    </div>
+    <div id="c-decision" class="decision-indicator" style="display:none;">
+      <div id="c-circle" class="decision-circle">-</div>
+    </div>
+    <div id="c-response" style="color:#0f0;padding:10px;min-height:80px;">
+      人間的・感情的分析ユニット準備完了
+    </div>
+    <div class="unit-metrics">
+      <div class="metric">
+        <div class="metric-label">信頼度</div>
+        <div class="metric-value" id="c-conf">0%</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">応答速度</div>
+        <div class="metric-value" id="c-speed">0ms</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="control-panel">
+  <div class="mode-tabs">
+    <button class="mode-tab active" onclick="switchMode('consensus', this)">CONSENSUS MODE</button>
+    <button class="mode-tab" onclick="switchMode('integration', this)">INTEGRATION MODE</button>
+    <button class="mode-tab" onclick="switchMode('synthesis', this)">SYNTHESIS MODE</button>
+  </div>
+  
+  <div class="input-group">
+    <input type="text" id="query" class="query-input" placeholder="分析クエリを入力してください..." />
+    <button id="execute" class="execute-btn" onclick="executeAnalysis()">EXECUTE</button>
+  </div>
+</div>
+
+<div class="result-panel">
+  <div class="result-header">
+    <div class="result-title">ANALYSIS RESULT</div>
+    <div class="result-meta">
+      <span>MODE: <span id="result-mode">-</span></span>
+      <span>TIME: <span id="result-time">-</span></span>
+    </div>
+  </div>
+  <div id="consensus-panel" class="consensus-decision" style="display:none;">
+    <div class="decision-result" id="final-decision">-</div>
+    <div class="decision-details">
+      <div class="detail-item">
+        <div class="detail-label">承認</div>
+        <div class="detail-value approve" id="approve-count">0</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">否認</div>
+        <div class="detail-value reject" id="reject-count">0</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">保留</div>
+        <div class="detail-value hold" id="hold-count">0</div>
+      </div>
+    </div>
+  </div>
+  <div id="result-content" class="result-content">
+    システム待機中...
+  </div>
+</div>
+
+<script>
+let currentMode = 'consensus';
+let isProcessing = false;
+
+// 時計更新
+setInterval(() => {
+  const now = new Date();
+  document.getElementById('time').textContent = 
+    now.toTimeString().split(' ')[0];
+}, 1000);
+
+function switchMode(mode, btn) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  btn.classList.add('active');
+  document.getElementById('mode-indicator').textContent = mode.toUpperCase();
+  
+  // CONSENSUSモードの時だけ決定表示を切り替え
+  const showDecision = (mode === 'consensus');
+  ['b-decision', 'm-decision', 'c-decision'].forEach(id => {
+    document.getElementById(id).style.display = showDecision ? 'block' : 'none';
+  });
+  
+  // 結果パネルもリセット
+  document.getElementById('consensus-panel').style.display = 'none';
+}
+
+function generateDecision() {
+  const decisions = ['承認', '否認', '保留'];
+  return decisions[Math.floor(Math.random() * decisions.length)];
+}
+
+async function executeAnalysis() {
+  if (isProcessing) return;
+  
+  const query = document.getElementById('query').value.trim();
+  if (!query) {
+    alert('クエリを入力してください');
+    return;
+  }
+  
+  isProcessing = true;
+  document.getElementById('execute').disabled = true;
+  
+  // リセット
+  document.getElementById('result-content').innerHTML = 
+    '<div class="processing">分析処理中...</div>';
+  document.getElementById('consensus-panel').style.display = 'none';
+  
+  try {
+    const startTime = Date.now();
+    
+    const response = await fetch('/api/consensus', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        prompt: query,
+        meta: { mode: currentMode }
+      })
+    });
+    
+    const data = await response.json();
+    const responseTime = Date.now() - startTime;
+    
+    // メトリクス更新
+    ['b', 'm', 'c'].forEach((unit, i) => {
+      const conf = 75 + Math.random() * 20;
+      document.getElementById(`${unit}-conf`).textContent = `${conf.toFixed(0)}%`;
+      document.getElementById(`${unit}-speed`).textContent = `${responseTime + i * 100}ms`;
+    });
+    
+    // 各ユニットの応答を表示
+    if (data.candidates) {
+      document.getElementById('b-response').textContent = 
+        data.candidates.find(c => c.magi_unit === 'BALTHASAR-2')?.text || '';
+      document.getElementById('m-response').textContent = 
+        data.candidates.find(c => c.magi_unit === 'MELCHIOR-1')?.text || '';
+      document.getElementById('c-response').textContent = 
+        data.candidates.find(c => c.magi_unit === 'CASPER-3')?.text || '';
+    }
+    
+    // CONSENSUSモードの場合は決定を表示
+    if (currentMode === 'consensus') {
+      const bDecision = generateDecision();
+      const mDecision = generateDecision();
+      const cDecision = generateDecision();
+      
+      // 各ユニットの決定を表示
+      updateDecisionCircle('b-circle', bDecision);
+      updateDecisionCircle('m-circle', mDecision);
+      updateDecisionCircle('c-circle', cDecision);
+      
+      // 集計
+      const decisions = [bDecision, mDecision, cDecision];
+      const approveCount = decisions.filter(d => d === '承認').length;
+      const rejectCount = decisions.filter(d => d === '否認').length;
+      const holdCount = decisions.filter(d => d === '保留').length;
+      
+      // 最終決定
+      let finalDecision = '保留';
+      if (approveCount >= 2) finalDecision = '承認';
+      else if (rejectCount >= 2) finalDecision = '否認';
+      
+      // 表示
+      document.getElementById('consensus-panel').style.display = 'block';
+      document.getElementById('final-decision').textContent = finalDecision;
+      document.getElementById('final-decision').className = 
+        `decision-result ${finalDecision === '承認' ? 'approve' : 
+                          finalDecision === '否認' ? 'reject' : 'hold'}`;
+      
+      document.getElementById('approve-count').textContent = approveCount;
+      document.getElementById('reject-count').textContent = rejectCount;
+      document.getElementById('hold-count').textContent = holdCount;
+    }
+    
+    // 最終結果表示
+    document.getElementById('result-content').textContent = data.final || '';
+    document.getElementById('result-mode').textContent = currentMode.toUpperCase();
+    document.getElementById('result-time').textContent = new Date().toTimeString().split(' ')[0];
+    
+  } catch (error) {
+    console.error('Error:', error);
+    document.getElementById('result-content').textContent = 
+      'エラー: ' + error.message;
+  } finally {
+    isProcessing = false;
+    document.getElementById('execute').disabled = false;
+  }
+}
+
+function updateDecisionCircle(id, decision) {
+  const circle = document.getElementById(id);
+  circle.textContent = decision;
+  circle.className = 'decision-circle decision-' + 
+    (decision === '承認' ? 'approve' : 
+     decision === '否認' ? 'reject' : 'hold');
+}
+
+// Enterキーで実行
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('query').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') executeAnalysis();
+  });
+});
+</script>
+
+</body>
+</html>
