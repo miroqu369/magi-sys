@@ -28,3 +28,7 @@ node bootstrap.js
 
 ---
 DOGMA PROJECT 2025
+
+## ライセンス
+
+MIT License - 詳細は [LICENSE](LICENSE) ファイルを参照
