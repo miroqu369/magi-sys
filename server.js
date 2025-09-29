@@ -84,6 +84,7 @@ app.post('/api/consensus', async (req, res) => {
         const integrationResult = await integrateWithGPT(prompt, candidates);
         finalAnswer = integrationResult.final;
         judgeInfo = {
+          name: "Isabelle",
           model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
           reason: integrationResult.reason,
           method: 'integration',
@@ -98,6 +99,7 @@ app.post('/api/consensus', async (req, res) => {
         const synthesisResult = await synthesizeResponses(prompt, candidates);
         finalAnswer = synthesisResult.final;
         judgeInfo = {
+          name: "Isabelle",
           model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
           reason: synthesisResult.reason,
           method: 'synthesis',
@@ -124,6 +126,7 @@ app.post('/api/consensus', async (req, res) => {
           const judgeResult = await openai.judge(prompt, candidates);
           finalAnswer = judgeResult.final;
           judgeInfo = {
+          name: "Isabelle",
             model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
             reason: judgeResult.reason,
             winner: judgeResult.winner,
