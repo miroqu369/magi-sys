@@ -1,259 +1,197 @@
 'use strict';
-// プロバイダーをロード
+const express = require('express');
+const app = global.app || express();
+const path = require('path');
+
+// Providers
 const GrokProvider = require('./providers/grok');
 const GeminiProvider = require('./providers/gemini');
 const AnthropicProvider = require('./providers/anthropic');
 const OpenAIProvider = require('./providers/openai');
-const SYSTEM_VERSION = '2.0.0';
-// /api/grok/ping - Grok疎通確認
-app.post('/api/grok/ping', async (req, res) => {
-  try {
-    const grok = new GrokProvider();
-    await grok.ping();
-    const text = await grok.chat('Hello, this is a test. Reply with OK.', { temperature: 0.1 });
-    res.json({ ok: true, text, version: SYSTEM_VERSION });
-  } catch (error) {
-    console.error('Grok ping error:', error);
-    res.status(500).json({ ok: false, error: error.message });
-  }
+
+// Initialize providers
+let grok, gemini, anthropic, openai;
+try {
+  grok = new GrokProvider();
+  gemini = new GeminiProvider();
+  anthropic = new AnthropicProvider();
+  openai = new OpenAIProvider();
+  console.log('✅ All providers initialized');
+} catch (err) {
+  console.error('Provider initialization error:', err);
+}
+
+// Static files
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-// /api/consensus - 合議エンドポイント（v2.0）
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy' });
+});
+
+// Main consensus API endpoint
 app.post('/api/consensus', async (req, res) => {
   const startTime = Date.now();
-  const { prompt, meta = {} } = req.body;
   
-  if (!prompt) {
-    return res.status(400).json({ error: 'prompt is required' });
-  }
-  const temperature = meta.temperature ?? 0.2;
-  const timeout_ms = meta.timeout_ms ?? 25000;
-  const mode = meta.mode ?? 'consensus';
-  console.log(`[MAGI v${SYSTEM_VERSION}] Mode: ${mode.toUpperCase()}, Prompt: "${prompt.substring(0, 50)}..."`);
   try {
-    // 3つのAIを並列実行
-    const results = await Promise.allSettled([
-      executeWithTimeout('grok', () => new GrokProvider().chat(prompt, { temperature }), timeout_ms),
-      executeWithTimeout('gemini', () => new GeminiProvider().chat(prompt, { temperature }), timeout_ms),
-      executeWithTimeout('claude', () => new AnthropicProvider().chat(prompt, { temperature }), timeout_ms)
-    ]);
-    const candidates = results.map((result, idx) => {
-      const providers = ['grok', 'gemini', 'claude'];
-      const magi_names = ['BALTHASAR-2', 'MELCHIOR-1', 'CASPER-3'];
-      const roles = ['創造的・革新的分析', '論理的・科学的分析', '人間的・感情的分析'];
-      
-      if (result.status === 'fulfilled') {
-        return {
-          provider: providers[idx],
-          magi_unit: magi_names[idx],
-          role: roles[idx],
-          ok: true,
-          text: result.value
-        };
-      } else {
-        return {
-          provider: providers[idx],
-          magi_unit: magi_names[idx],
-          role: roles[idx],
-          ok: false,
-          error: result.reason?.message || 'Unknown error'
-        };
-      }
-    });
-    // 一致度計算
-    const validTexts = candidates.filter(c => c.ok).map(c => c.text);
-    const agreementRatio = calculateAgreement(validTexts);
-    
-    let finalAnswer;
-    let judgeInfo = null;
-    let synthesisMethod = null;
-    // モード別処理
-    switch(mode) {
-      case 'integration':
-        console.log(`[GPT-4 Integration Mode]`);
-        const integrationResult = await integrateWithGPT(prompt, candidates);
-        finalAnswer = integrationResult.final;
-        judgeInfo = {
-          name: "Isabelle",
-          model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-          reason: integrationResult.reason,
-          method: 'integration',
-          decision: 'INTEGRATED',
-          insights: integrationResult.insights
-        };
-        synthesisMethod = 'gpt_integration';
-        break;
-      case 'synthesis':
-        console.log(`[Advanced Synthesis Mode]`);
-        const synthesisResult = await synthesizeResponses(prompt, candidates);
-        finalAnswer = synthesisResult.final;
-        judgeInfo = {
-          name: "Isabelle",
-          model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-          reason: synthesisResult.reason,
-          method: 'synthesis',
-          insights: synthesisResult.insights,
-          decision: 'SYNTHESIZED'
-        };
-        synthesisMethod = 'advanced_synthesis';
-        break;
-      case 'consensus':
-      default:
-        if (agreementRatio >= 0.66) {
-          console.log(`[Consensus Reached: ${(agreementRatio * 100).toFixed(1)}%]`);
-          finalAnswer = validTexts[0] || 'No valid responses';
-          judgeInfo = { 
-            model: 'consensus', 
-            reason: `合議により一致度${(agreementRatio * 100).toFixed(1)}%で合意`,
-            decision: 'APPROVED'
-          };
-          synthesisMethod = 'majority_consensus';
-        } else {
-          console.log(`[GPT-4 Arbitration Required]`);
-          const openai = new OpenAIProvider();
-          const judgeResult = await openai.judge(prompt, candidates);
-          finalAnswer = judgeResult.final;
-          judgeInfo = {
-          name: "Isabelle",
-            model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-            reason: judgeResult.reason,
-            winner: judgeResult.winner,
-            decision: 'ARBITRATED'
-          };
-          synthesisMethod = 'gpt_arbitration';
-        }
-    }
-    const totalTime = Date.now() - startTime;
-    
-    res.json({
-      version: SYSTEM_VERSION,
-      final: finalAnswer,
-      mode: mode,
-      judge: judgeInfo,
-      candidates,
-      metrics: {
-        agreement_ratio: agreementRatio,
-        response_time_ms: totalTime,
-        synthesis_method: synthesisMethod,
-        valid_responses: validTexts.length,
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    console.error('Consensus error:', error);
-    res.status(500).json({ 
-      error: error.message,
-      version: SYSTEM_VERSION 
-    });
-  }
-});
-// GPT-4統合関数
-async function integrateWithGPT(originalPrompt, candidates) {
-  const openai = new OpenAIProvider();
-  
-  const integrationPrompt = `あなたはMAGIシステムの最終統合判断を行うGPT-4です。
-【元の質問】${originalPrompt}
-【3つのMAGIユニットの回答】
-${candidates.map(c => `${c.magi_unit} (${c.role}): ${c.ok ? c.text : '[エラー]'}`).join('\n---\n')}
-【統合タスク】各回答の長所を活かし、包括的な回答を生成してください。
-【出力形式】必ず以下のJSON形式で回答:
-{"final": "統合された最終回答", "reason": "統合の根拠", "insights": ["洞察1", "洞察2"]}`;
-  try {
-    const response = await openai.chat(integrationPrompt, { temperature: 0.3 });
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-  } catch (e) {
-    console.log('Integration parse error:', e);
-  }
-  
-  return {
-    final: response || 'Integration failed',
-    reason: "GPT-4による統合判断",
-    insights: []
-  };
-}
-// 高度な合成関数
-async function synthesizeResponses(originalPrompt, candidates) {
-  const openai = new OpenAIProvider();
-  
-  const synthesisPrompt = `あなたはMAGIシステムの高度な合成判断を行うGPT-4です。
-【元の質問】${originalPrompt}
-【3つのMAGIユニットの分析】
-${candidates.map(c => `${c.magi_unit}: ${c.ok ? c.text : '[エラー]'}`).join('\n---\n')}
-【創発的合成タスク】各ユニットの特性を融合させ、創発的な回答を生成。
-【出力形式】必ず以下のJSON形式で回答:
-{"final": "合成された回答", "reason": "合成プロセス", "insights": {"creative": "創造的洞察", "logical": "論理的洞察", "emotional": "感情的洞察"}}`;
-  try {
-    const response = await openai.chat(synthesisPrompt, { temperature: 0.4 });
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-  } catch (e) {
-    console.log('Synthesis parse error:', e);
-  }
-  
-  return {
-    final: response || 'Synthesis failed',
-    reason: "高度な合成による判断",
-    insights: {}
-  };
-}
-// ユーティリティ関数
-async function executeWithTimeout(name, fn, timeout) {
-  return Promise.race([
-    fn(),
-    new Promise((_, reject) => 
-      setTimeout(() => reject(new Error(`${name} timeout after ${timeout}ms`)), timeout)
-    )
-  ]);
-}
-function calculateAgreement(texts) {
-  if (texts.length < 2) return 0;
-  
-  const tokenize = (text) => text.toLowerCase().split(/\s+/);
-  const tokens = texts.map(tokenize);
-  
-  let totalSimilarity = 0;
-  let comparisons = 0;
-  
-  for (let i = 0; i < tokens.length; i++) {
-    for (let j = i + 1; j < tokens.length; j++) {
-      const set1 = new Set(tokens[i]);
-      const set2 = new Set(tokens[j]);
-      const intersection = new Set([...set1].filter(x => set2.has(x)));
-      const union = new Set([...set1, ...set2]);
-      
-      totalSimilarity += intersection.size / union.size;
-      comparisons++;
-    }
-  }
-  
-  return comparisons > 0 ? totalSimilarity / comparisons : 0;
-}
-console.log('✅ MAGI v2.0 server module loaded');
-module.exports = app;
-// ===============================================
-// ====== MAGI DECISION MODE (SINGLE) ======
-app.post('/api/decision', async (req, res) => {
-    console.log('[DECISION] Request received');
     const { prompt } = req.body;
+    const meta = req.body.meta || {};
+    const mode = meta.mode || 'integration';
     
     if (!prompt) {
-        return res.status(400).json({ error: 'Prompt required' });
+      return res.status(400).json({ error: 'Prompt is required' });
     }
-    
-    const decision = prompt.toLowerCase().includes('should') ? '承認' : '否認';
-    
+
+    console.log(`Processing ${mode} mode for: ${prompt.substring(0, 50)}...`);
+
+    // Execute parallel requests to all AI providers
+    const results = await Promise.allSettled([
+      grok.chat(prompt, meta),
+      gemini.chat(prompt, meta),
+      anthropic.chat(prompt, meta)
+    ]);
+
+    // Format responses
+    const candidates = [
+      {
+        provider: 'grok',
+        magi_unit: 'BALTHASAR-2',
+        role: '創造的・革新的分析',
+        ok: results[0].status === 'fulfilled',
+        text: results[0].status === 'fulfilled' ? results[0].value : 'Error: No response'
+      },
+      {
+        provider: 'gemini',
+        magi_unit: 'MELCHIOR-1',
+        role: '論理的・科学的分析',
+        ok: results[1].status === 'fulfilled',
+        text: results[1].status === 'fulfilled' ? results[1].value : 'Error: No response'
+      },
+      {
+        provider: 'claude',
+        magi_unit: 'CASPER-3',
+        role: '人間的・感情的分析',
+        ok: results[2].status === 'fulfilled',
+        text: results[2].status === 'fulfilled' ? results[2].value : 'Error: No response'
+      }
+    ];
+
+    // Calculate metrics
+    const validResponses = candidates.filter(c => c.ok);
+    const metrics = {
+      response_time_ms: Date.now() - startTime,
+      valid_responses: validResponses.length,
+      agreement_ratio: validResponses.length / 3,
+      timestamp: new Date().toISOString()
+    };
+
+    let final = '';
+    let judge = {
+      model: 'gpt-4o-mini',
+      method: mode
+    };
+
+    // Process based on mode
+    if (mode === 'consensus') {
+      // CONSENSUS MODE - Simple implementation without openai.judge
+      if (validResponses.length === 0) {
+        final = 'Error: No valid responses from AI units';
+        judge.method = 'consensus-failed';
+      } else if (validResponses.length === 1) {
+        final = validResponses[0].text;
+        judge.method = 'consensus-single';
+        judge.winner = validResponses[0].provider;
+      } else {
+        // Use first valid response for now (simple implementation)
+        final = validResponses[0].text;
+        judge.method = 'consensus-first';
+        judge.winner = validResponses[0].provider;
+        judge.reason = 'Using first valid response';
+      }
+      
+    } else if (mode === 'integration') {
+      // INTEGRATION MODE - Use GPT-4 to integrate responses
+      if (validResponses.length === 0) {
+        final = 'Error: No valid responses to integrate';
+        judge.method = 'integration-failed';
+      } else {
+        try {
+          const integrationPrompt = `統合して最適な回答を提供してください：\n\n${
+            validResponses.map(r => `[${r.magi_unit}]: ${r.text}`).join('\n\n')
+          }`;
+          
+          final = await openai.chat(integrationPrompt, { temperature: 0.3 });
+          judge.method = 'integration';
+          judge.name = 'Isabelle';
+          judge.reason = 'Integrated all valid responses';
+        } catch (err) {
+          console.error('Integration error:', err);
+          final = validResponses[0].text;
+          judge.method = 'integration-fallback';
+        }
+      }
+      
+    } else if (mode === 'synthesis') {
+      // SYNTHESIS MODE - Creative synthesis
+      if (validResponses.length === 0) {
+        final = 'Error: No valid responses for synthesis';
+        judge.method = 'synthesis-failed';
+      } else {
+        try {
+          const synthesisPrompt = `以下の分析を創造的に統合してください：\n\n${
+            validResponses.map(r => `[${r.magi_unit}]: ${r.text}`).join('\n\n')
+          }`;
+          
+          final = await openai.chat(synthesisPrompt, { temperature: 0.7 });
+          judge.method = 'synthesis';
+          judge.name = 'Isabelle';
+          judge.reason = 'Creative synthesis completed';
+        } catch (err) {
+          console.error('Synthesis error:', err);
+          final = validResponses[0].text;
+          judge.method = 'synthesis-fallback';
+        }
+      }
+      
+    } else {
+      // Default to integration mode
+      final = validResponses.length > 0 ? validResponses[0].text : 'Error: Invalid mode';
+      judge.method = 'default';
+    }
+
+    // Send response
     res.json({
-        final: decision,
-        reason: 'Test decision',
-        units: [
-            { magi_unit: 'BALTHASAR-2', decision: decision },
-            { magi_unit: 'MELCHIOR-1', decision: decision },
-            { magi_unit: 'CASPER-3', decision: decision }
-        ]
+      version: '2.0.0',
+      final,
+      mode,
+      judge,
+      candidates,
+      metrics
     });
+
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+      version: '2.0.0'
+    });
+  }
 });
-console.log('✅ Decision endpoint registered');
+
+// Grok test endpoint
+app.post('/api/grok/ping', async (req, res) => {
+  try {
+    const result = await grok.chat('ping', { temperature: 0.1 });
+    res.json({ ok: true, text: result });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+module.exports = app;
