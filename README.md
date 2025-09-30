@@ -27,3 +27,17 @@ MIT License - 詳細は [LICENSE](LICENSE) ファイルを参照
 
 ---
 DOGMA PROJECT 2024
+
+## 🎨 UI Interfaces
+
+- **Main UI**: `/index.html` - シンプルな入力インターフェース
+- **Dashboard**: `/magi-dash.html` - ダッシュボード表示
+- **Debate Mode**: `/magi-debate.html` - AI議論モード
+- **EVA Interface**: `/eva.html` - EVAスタイルUI
+- **Full Response** ⭐: `/dogma-full.html` - 各AI個別回答表示（新機能）
+
+### Full Response UIの特徴
+- 3つのAIユニットの回答を個別表示
+- 色分けされた見やすいレイアウト
+- 最終統合結果とメトリクス表示
+- レスポンシブデザイン対応
