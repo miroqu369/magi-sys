@@ -1,7 +1,7 @@
 class AnthropicProvider {
     constructor() {
         this.key = process.env.ANTHROPIC_API_KEY;
-        this.model = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
+        this.model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
     }
     async chat(prompt, opts = {}) {
         if (!this.key) throw new Error('ANTHROPIC_API_KEY not configured');

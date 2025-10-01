@@ -1,7 +1,7 @@
 class GeminiProvider {
     constructor() {
         this.key = process.env.GEMINI_API_KEY;
-        this.model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+        this.model = process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp';
     }
     async chat(prompt, opts = {}) {
         if (!this.key) throw new Error('GEMINI_API_KEY not configured');
