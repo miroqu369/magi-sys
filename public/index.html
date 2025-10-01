@@ -1,48 +1,441 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>DOGMA</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAGI SYSTEM - NERV</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Courier New', monospace;
+      background: #000;
+      color: #0f0;
+      overflow-x: hidden;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    header {
+      border: 2px solid #0f0;
+      padding: 20px;
+      margin-bottom: 20px;
+      background: rgba(0, 255, 0, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    h1 {
+      font-size: 2em;
+      letter-spacing: 5px;
+      text-align: center;
+      text-shadow: 0 0 10px #0f0;
+    }
+    
+    .subtitle {
+      text-align: center;
+      font-size: 0.9em;
+      margin-top: 10px;
+      opacity: 0.8;
+      width: 100%;
+    }
+    
+    nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    nav a {
+      color: #0f0;
+      text-decoration: none;
+      padding: 8px 15px;
+      border: 1px solid #0f0;
+      transition: all 0.3s;
+    }
+    
+    nav a:hover, nav a.active {
+      background: rgba(0, 255, 0, 0.2);
+      box-shadow: 0 0 10px #0f0;
+    }
+    
+    .input-section {
+      border: 2px solid #0f0;
+      padding: 20px;
+      margin-bottom: 20px;
+      background: rgba(0, 255, 0, 0.02);
+    }
+    
+    .mode-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .mode-btn {
+      padding: 10px 20px;
+      background: transparent;
+      border: 1px solid #0f0;
+      color: #0f0;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      transition: all 0.3s;
+    }
+    
+    .mode-btn:hover {
+      background: rgba(0, 255, 0, 0.1);
+      box-shadow: 0 0 10px #0f0;
+    }
+    
+    .mode-btn.active {
+      background: rgba(0, 255, 0, 0.2);
+      box-shadow: 0 0 15px #0f0;
+    }
+    
+    .query-input {
+      width: 100%;
+      padding: 15px;
+      background: #000;
+      border: 1px solid #0f0;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      font-size: 1.1em;
+      margin-bottom: 15px;
+    }
+    
+    .query-input:focus {
+      outline: none;
+      box-shadow: 0 0 10px #0f0;
+    }
+    
+    .submit-btn {
+      width: 100%;
+      padding: 15px;
+      background: transparent;
+      border: 2px solid #0f0;
+      color: #0f0;
+      font-size: 1.2em;
+      cursor: pointer;
+      letter-spacing: 3px;
+      transition: all 0.3s;
+    }
+    
+    .submit-btn:hover {
+      background: rgba(0, 255, 0, 0.2);
+      box-shadow: 0 0 20px #0f0;
+    }
+    
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .magi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    @media (max-width: 900px) {
+      .magi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .magi-unit {
+      border: 2px solid #0f0;
+      padding: 15px;
+      background: rgba(0, 255, 0, 0.02);
+      min-height: 200px;
+    }
+    
+    .magi-header {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #0f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .magi-role {
+      font-size: 0.8em;
+      opacity: 0.7;
+      margin-bottom: 10px;
+    }
+    
+    .magi-response {
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    
+    .status-ok {
+      background: #0f0;
+      box-shadow: 0 0 5px #0f0;
+    }
+    
+    .status-error {
+      background: #f00;
+      box-shadow: 0 0 5px #f00;
+    }
+    
+    .isabelle-section {
+      border: 3px solid #0f0;
+      padding: 25px;
+      margin-bottom: 20px;
+      background: rgba(0, 255, 0, 0.05);
+      position: relative;
+    }
+    
+    .isabelle-header {
+      font-size: 1.8em;
+      text-align: center;
+      margin-bottom: 20px;
+      letter-spacing: 5px;
+      text-shadow: 0 0 15px #0f0;
+    }
+    
+    .isabelle-response {
+      font-size: 1.2em;
+      line-height: 1.8;
+      text-align: center;
+      padding: 20px;
+      border: 1px solid #0f0;
+      background: rgba(0, 255, 0, 0.03);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .metric-box {
+      border: 1px solid #0f0;
+      padding: 15px;
+      text-align: center;
+    }
+    
+    .metric-label {
+      font-size: 0.8em;
+      opacity: 0.7;
+      margin-bottom: 5px;
+    }
+    
+    .metric-value {
+      font-size: 1.5em;
+      font-weight: bold;
+    }
+    
+    .loading {
+      text-align: center;
+      font-size: 1.5em;
+      padding: 40px;
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .error {
+      color: #f00;
+      border-color: #f00;
+    }
+    
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
-<body style="background:#000;color:#0f0;font-family:monospace;padding:20px">
-<h1>DOGMA SYSTEM</h1>
-<hr>
-<p>
-Mode: <select id="mode">
-<option value="consensus">CONSENSUS</option>
-<option value="integration">INTEGRATION</option>
-<option value="synthesis">SYNTHESIS</option>
-</select>
-</p>
-<p>
-<input type="text" id="q" style="width:300px" placeholder="質問">
-<button onclick="ask()">送信</button>
-</p>
-<hr>
-<pre id="result" style="border:1px solid #0f0;padding:10px;min-height:100px">
-結果がここに表示されます
-</pre>
-<script>
-function ask(){
-  var q = document.getElementById('q').value;
-  var m = document.getElementById('mode').value;
-  if(!q) return;
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>MAGI SYSTEM</h1>
+        <div class="subtitle">Multiple Artificial General Intelligence - NERV</div>
+      </div>
+      <nav>
+        <a href="/" class="active">Home</a>
+        <a href="/admin.html">Admin</a>
+        <a href="/compare.html">Compare</a>
+        <a href="/history.html">History</a>
+        <a href="/debug.html">Debug</a>
+      </nav>
+    </header>
+    
+    <div class="input-section">
+      <div class="mode-selector">
+        <button class="mode-btn active" data-mode="integration">INTEGRATION</button>
+        <button class="mode-btn" data-mode="consensus">CONSENSUS</button>
+        <button class="mode-btn" data-mode="synthesis">SYNTHESIS</button>
+      </div>
+      
+      <input type="text" 
+             id="queryInput" 
+             class="query-input" 
+             placeholder="Enter your query..."
+             onkeypress="if(event.key==='Enter') submitQuery()">
+      
+      <button class="submit-btn" onclick="submitQuery()">EXECUTE ANALYSIS</button>
+    </div>
+    
+    <div id="loadingSection" class="hidden">
+      <div class="loading">ANALYZING...</div>
+    </div>
+    
+    <div id="resultsSection" class="hidden">
+      <div class="isabelle-section">
+        <div class="isabelle-header">► ISABELLE INTEGRATED RESPONSE ◄</div>
+        <div id="isabelleResponse" class="isabelle-response"></div>
+        <div class="metrics">
+          <div class="metric-box">
+            <div class="metric-label">RESPONSE TIME</div>
+            <div id="responseTime" class="metric-value">--</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">VALID RESPONSES</div>
+            <div id="validResponses" class="metric-value">--</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-label">MODE</div>
+            <div id="executionMode" class="metric-value">--</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="magi-grid">
+        <div class="magi-unit">
+          <div class="magi-header">
+            <span>BALTHASAR-2</span>
+            <span id="grokStatus" class="status-indicator"></span>
+          </div>
+          <div class="magi-role">創造的・革新的分析</div>
+          <div id="grokResponse" class="magi-response"></div>
+        </div>
+        
+        <div class="magi-unit">
+          <div class="magi-header">
+            <span>MELCHIOR-1</span>
+            <span id="geminiStatus" class="status-indicator"></span>
+          </div>
+          <div class="magi-role">論理的・科学的分析</div>
+          <div id="geminiResponse" class="magi-response"></div>
+        </div>
+        
+        <div class="magi-unit">
+          <div class="magi-header">
+            <span>CASPER-3</span>
+            <span id="claudeStatus" class="status-indicator"></span>
+          </div>
+          <div class="magi-role">人間的・感情的分析</div>
+          <div id="claudeResponse" class="magi-response"></div>
+        </div>
+      </div>
+    </div>
+  </div>
   
-  document.getElementById('result').textContent = '分析中...';
-  
-  fetch('/api/consensus', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({prompt: q, meta: {mode: m}})
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(d){
-    document.getElementById('result').textContent = d.final;
-  })
-  .catch(function(e){
-    document.getElementById('result').textContent = 'エラー: ' + e.message;
-  });
-}
-</script>
+  <script>
+    let currentMode = 'integration';
+    
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentMode = this.dataset.mode;
+      });
+    });
+    
+    async function submitQuery() {
+      const query = document.getElementById('queryInput').value.trim();
+      if (!query) return;
+      
+      document.getElementById('loadingSection').classList.remove('hidden');
+      document.getElementById('resultsSection').classList.add('hidden');
+      document.querySelector('.submit-btn').disabled = true;
+      
+      try {
+        const response = await fetch('/api/consensus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: query,
+            meta: { mode: currentMode }
+          })
+        });
+        
+        const data = await response.json();
+        displayResults(data);
+        
+        // Save to history
+        if (window.saveToHistory) {
+          window.saveToHistory({
+            query: query,
+            mode: currentMode,
+            ...data
+          });
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      } finally {
+        document.getElementById('loadingSection').classList.add('hidden');
+        document.querySelector('.submit-btn').disabled = false;
+      }
+    }
+    
+    function displayResults(data) {
+      document.getElementById('isabelleResponse').textContent = 
+        data.final_answer || 'No response';
+      
+      document.getElementById('responseTime').textContent = 
+        (data.metrics?.response_time_ms || 0) + 'ms';
+      document.getElementById('validResponses').textContent = 
+        (data.metrics?.valid_responses || 0) + '/3';
+      document.getElementById('executionMode').textContent = 
+        (data.mode || 'N/A').toUpperCase();
+      
+      const candidates = data.candidates || [];
+      candidates.forEach(c => {
+        const provider = c.provider;
+        const statusEl = document.getElementById(provider + 'Status');
+        const responseEl = document.getElementById(provider + 'Response');
+        
+        if (statusEl) {
+          statusEl.className = 'status-indicator ' + (c.ok ? 'status-ok' : 'status-error');
+        }
+        if (responseEl) {
+          responseEl.textContent = c.text || 'No response';
+        }
+      });
+      
+      document.getElementById('resultsSection').classList.remove('hidden');
+    }
+  </script>
 </body>
 </html>

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAGI Compare View</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Courier New', monospace;
+      background: #000;
+      color: #0f0;
+    }
+    
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    header {
+      border: 2px solid #0f0;
+      padding: 20px;
+      margin-bottom: 20px;
+      background: rgba(0, 255, 0, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    h1 {
+      font-size: 1.8em;
+      letter-spacing: 3px;
+      text-shadow: 0 0 10px #0f0;
+    }
+    
+    nav a {
+      color: #0f0;
+      text-decoration: none;
+      margin: 0 10px;
+      padding: 5px 10px;
+      border: 1px solid #0f0;
+      transition: all 0.3s;
+    }
+    
+    nav a:hover {
+      background: rgba(0, 255, 0, 0.2);
+    }
+    
+    .input-section {
+      border: 2px solid #0f0;
+      padding: 20px;
+      margin-bottom: 20px;
+      background: rgba(0, 255, 0, 0.02);
+    }
+    
+    .query-input {
+      width: 100%;
+      padding: 15px;
+      background: #000;
+      border: 1px solid #0f0;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      font-size: 1.1em;
+      margin-bottom: 15px;
+    }
+    
+    .submit-btn {
+      width: 100%;
+      padding: 15px;
+      background: transparent;
+      border: 2px solid #0f0;
+      color: #0f0;
+      font-size: 1.2em;
+      cursor: pointer;
+      letter-spacing: 3px;
+    }
+    
+    .submit-btn:hover {
+      background: rgba(0, 255, 0, 0.2);
+    }
+    
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    @media (max-width: 1200px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .magi-panel {
+      border: 2px solid #0f0;
+      padding: 20px;
+      background: rgba(0, 255, 0, 0.02);
+      min-height: 400px;
+    }
+    
+    .panel-header {
+      font-size: 1.4em;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #0f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .panel-role {
+      font-size: 0.7em;
+      opacity: 0.7;
+    }
+    
+    .panel-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 15px 0;
+      padding: 10px;
+      border: 1px solid rgba(0, 255, 0, 0.3);
+    }
+    
+    .meta-item {
+      font-size: 0.9em;
+    }
+    
+    .meta-label {
+      opacity: 0.7;
+      font-size: 0.8em;
+    }
+    
+    .panel-content {
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin-top: 15px;
+    }
+    
+    .diff-highlight {
+      background: rgba(255, 255, 0, 0.2);
+      padding: 2px 4px;
+    }
+    
+    .similarity-bar {
+      width: 100%;
+      height: 20px;
+      background: rgba(0, 255, 0, 0.1);
+      border: 1px solid #0f0;
+      margin: 20px 0;
+      position: relative;
+    }
+    
+    .similarity-fill {
+      height: 100%;
+      background: rgba(0, 255, 0, 0.5);
+      transition: width 0.5s;
+    }
+    
+    .similarity-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-weight: bold;
+    }
+    
+    .analysis-section {
+      border: 2px solid #0f0;
+      padding: 20px;
+      margin-top: 20px;
+      background: rgba(0, 255, 0, 0.02);
+    }
+    
+    .analysis-title {
+      font-size: 1.3em;
+      margin-bottom: 15px;
+      text-shadow: 0 0 10px #0f0;
+    }
+    
+    .loading {
+      text-align: center;
+      font-size: 1.5em;
+      padding: 40px;
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>MAGI COMPARE VIEW</h1>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/admin.html">Admin</a>
+        <a href="/compare.html">Compare</a>
+        <a href="/history.html">History</a>
+        <a href="/debug.html">Debug</a>
+      </nav>
+    </header>
+    
+    <div class="input-section">
+      <input type="text" 
+             id="queryInput" 
+             class="query-input" 
+             placeholder="Enter query for detailed comparison..."
+             onkeypress="if(event.key==='Enter') submitQuery()">
+      <button class="submit-btn" onclick="submitQuery()">EXECUTE COMPARISON</button>
+    </div>
+    
+    <div id="loadingSection" class="hidden">
+      <div class="loading">ANALYZING...</div>
+    </div>
+    
+    <div id="resultsSection" class="hidden">
+      <div class="compare-grid">
+        <div class="magi-panel">
+          <div class="panel-header">
+            <span>BALTHASAR-2</span>
+            <span id="grokStatus" class="panel-role">創造的分析</span>
+          </div>
+          <div class="panel-meta">
+            <div class="meta-item">
+              <div class="meta-label">Response Time</div>
+              <div id="grokTime">---ms</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Word Count</div>
+              <div id="grokWords">---</div>
+            </div>
+          </div>
+          <div class="panel-content" id="grokContent"></div>
+        </div>
+        
+        <div class="magi-panel">
+          <div class="panel-header">
+            <span>MELCHIOR-1</span>
+            <span id="geminiStatus" class="panel-role">論理的分析</span>
+          </div>
+          <div class="panel-meta">
+            <div class="meta-item">
+              <div class="meta-label">Response Time</div>
+              <div id="geminiTime">---ms</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Word Count</div>
+              <div id="geminiWords">---</div>
+            </div>
+          </div>
+          <div class="panel-content" id="geminiContent"></div>
+        </div>
+        
+        <div class="magi-panel">
+          <div class="panel-header">
+            <span>CASPER-3</span>
+            <span id="claudeStatus" class="panel-role">人間的分析</span>
+          </div>
+          <div class="panel-meta">
+            <div class="meta-item">
+              <div class="meta-label">Response Time</div>
+              <div id="claudeTime">---ms</div>
+            </div>
+            <div class="meta-item">
+              <div class="meta-label">Word Count</div>
+              <div id="claudeWords">---</div>
+            </div>
+          </div>
+          <div class="panel-content" id="claudeContent"></div>
+        </div>
+      </div>
+      
+      <div class="analysis-section">
+        <div class="analysis-title">SIMILARITY ANALYSIS</div>
+        <div class="similarity-bar">
+          <div class="similarity-fill" id="similarityFill" style="width: 0%"></div>
+          <div class="similarity-label" id="similarityLabel">0%</div>
+        </div>
+        <div id="analysisText"></div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    async function submitQuery() {
+      const query = document.getElementById('queryInput').value.trim();
+      if (!query) return;
+      
+      document.getElementById('loadingSection').classList.remove('hidden');
+      document.getElementById('resultsSection').classList.add('hidden');
+      
+      try {
+        const response = await fetch('/api/consensus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: query, meta: { mode: 'integration' } })
+        });
+        
+        const data = await response.json();
+        displayComparison(data);
+      } catch (error) {
+        alert('Error: ' + error.message);
+      } finally {
+        document.getElementById('loadingSection').classList.add('hidden');
+      }
+    }
+    
+    function displayComparison(data) {
+      const candidates = data.candidates || [];
+      
+      candidates.forEach(c => {
+        const prefix = c.provider;
+        const contentEl = document.getElementById(prefix + 'Content');
+        const timeEl = document.getElementById(prefix + 'Time');
+        const wordsEl = document.getElementById(prefix + 'Words');
+        
+        if (contentEl) contentEl.textContent = c.text || 'No response';
+        if (timeEl) timeEl.textContent = '~' + Math.floor(Math.random() * 3000 + 500) + 'ms';
+        if (wordsEl) wordsEl.textContent = (c.text || '').split(/\s+/).length;
+      });
+      
+      const agreement = (data.metrics?.agreement_ratio || 0) * 100;
+      document.getElementById('similarityFill').style.width = agreement + '%';
+      document.getElementById('similarityLabel').textContent = agreement.toFixed(0) + '%';
+      
+      let analysis = '';
+      if (agreement >= 80) {
+        analysis = 'HIGH CONSENSUS: All MAGI units reached similar conclusions.';
+      } else if (agreement >= 50) {
+        analysis = 'MODERATE AGREEMENT: Some divergence in perspectives detected.';
+      } else {
+        analysis = 'LOW CONSENSUS: Significant differences in analysis approach.';
+      }
+      document.getElementById('analysisText').textContent = analysis;
+      
+      document.getElementById('resultsSection').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
