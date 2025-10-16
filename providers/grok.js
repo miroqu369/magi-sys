@@ -30,6 +30,12 @@ class GrokProvider {
             },
             body: JSON.stringify(body)
         });
+        
+        if (!resp.ok) {
+            const errorText = await resp.text();
+            throw new Error(`Grok API error (${resp.status}): ${errorText}`);
+        }
+        
         const data = await resp.json();
         return data.choices?.[0]?.message?.content || '';
     }

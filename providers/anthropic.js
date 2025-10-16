@@ -19,6 +19,12 @@ class AnthropicProvider {
                 messages: [{ role: 'user', content: prompt }]
             })
         });
+        
+        if (!resp.ok) {
+            const errorText = await resp.text();
+            throw new Error(`Anthropic API error (${resp.status}): ${errorText}`);
+        }
+        
         const data = await resp.json();
         // デバッグ用
         console.log('Claude response:', JSON.stringify(data).substring(0, 200));
