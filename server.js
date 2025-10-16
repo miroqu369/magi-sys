@@ -3,6 +3,9 @@ const express = require('express');
 const app = global.app || express();
 const path = require('path');
 
+// Middleware for parsing JSON
+app.use(express.json({ limit: '1mb' }));
+
 // Providers
 const GrokProvider = require('./providers/grok');
 const GeminiProvider = require('./providers/gemini');
