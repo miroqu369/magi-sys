@@ -17,6 +17,12 @@ class GeminiProvider {
                 }
             })
         });
+        
+        if (!resp.ok) {
+            const errorText = await resp.text();
+            throw new Error(`Gemini API error (${resp.status}): ${errorText}`);
+        }
+        
         const data = await resp.json();
         console.log('Gemini response:', JSON.stringify(data).substring(0, 200));
         return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Gemini応答エラー';

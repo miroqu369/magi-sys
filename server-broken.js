@@ -1,4 +1,7 @@
 'use strict';
+const express = require('express');
+const app = global.app || express();
+
 // プロバイダーをロード
 const GrokProvider = require('./providers/grok');
 const GeminiProvider = require('./providers/gemini');
@@ -163,15 +166,20 @@ ${candidates.map(c => `${c.magi_unit} (${c.role}): ${c.ok ? c.text : '[エラー
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
+    // If no JSON match, return the raw response
+    return {
+      final: response || 'Integration failed',
+      reason: "GPT-4による統合判断",
+      insights: []
+    };
   } catch (e) {
     console.log('Integration parse error:', e);
+    return {
+      final: 'Integration failed',
+      reason: "GPT-4統合エラー",
+      insights: []
+    };
   }
-  
-  return {
-    final: response || 'Integration failed',
-    reason: "GPT-4による統合判断",
-    insights: []
-  };
 }
 // 高度な合成関数
 async function synthesizeResponses(originalPrompt, candidates) {
@@ -190,15 +198,20 @@ ${candidates.map(c => `${c.magi_unit}: ${c.ok ? c.text : '[エラー]'}`).join('
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
+    // If no JSON match, return the raw response
+    return {
+      final: response || 'Synthesis failed',
+      reason: "高度な合成による判断",
+      insights: {}
+    };
   } catch (e) {
     console.log('Synthesis parse error:', e);
+    return {
+      final: 'Synthesis failed',
+      reason: "合成プロセスエラー",
+      insights: {}
+    };
   }
-  
-  return {
-    final: response || 'Synthesis failed',
-    reason: "高度な合成による判断",
-    insights: {}
-  };
 }
 // ユーティリティ関数
 async function executeWithTimeout(name, fn, timeout) {
