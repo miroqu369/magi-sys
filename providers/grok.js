@@ -22,16 +22,26 @@ class GrokProvider {
             messages: [{ role: 'user', content: prompt }],
             temperature: opts.temperature ?? 0.2
         };
-        const resp = await fetch(`${this.base}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.key}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        });
-        const data = await resp.json();
-        return data.choices?.[0]?.message?.content || '';
+        try {
+            const resp = await fetch(`${this.base}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.key}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+            
+            if (!resp.ok) {
+                throw new Error(`Grok API error: ${resp.status} ${resp.statusText}`);
+            }
+            
+            const data = await resp.json();
+            return data.choices?.[0]?.message?.content || '';
+        } catch (error) {
+            console.error('Grok chat error:', error.message);
+            throw error;
+        }
     }
 }
 module.exports = GrokProvider;

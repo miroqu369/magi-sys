@@ -5,25 +5,35 @@ class AnthropicProvider {
     }
     async chat(prompt, opts = {}) {
         if (!this.key) throw new Error('ANTHROPIC_API_KEY not configured');
-        const resp = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'x-api-key': this.key,
-                'anthropic-version': '2023-06-01',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: this.model,
-                max_tokens: 2048,
-                temperature: opts.temperature ?? 0.2,
-                messages: [{ role: 'user', content: prompt }]
-            })
-        });
-        const data = await resp.json();
-        // デバッグ用
-        console.log('Claude response:', JSON.stringify(data).substring(0, 200));
-        // 正しいパス
-        return data.content?.[0]?.text || 'Claude応答エラー';
+        try {
+            const resp = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'x-api-key': this.key,
+                    'anthropic-version': '2023-06-01',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: this.model,
+                    max_tokens: 2048,
+                    temperature: opts.temperature ?? 0.2,
+                    messages: [{ role: 'user', content: prompt }]
+                })
+            });
+            
+            if (!resp.ok) {
+                throw new Error(`Anthropic API error: ${resp.status} ${resp.statusText}`);
+            }
+            
+            const data = await resp.json();
+            // デバッグ用
+            console.log('Claude response:', JSON.stringify(data).substring(0, 200));
+            // 正しいパス
+            return data.content?.[0]?.text || 'Claude応答エラー';
+        } catch (error) {
+            console.error('Anthropic chat error:', error.message);
+            throw error;
+        }
     }
 }
 module.exports = AnthropicProvider;
