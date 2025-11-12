@@ -23,7 +23,9 @@ class AnthropicProvider extends BaseProvider {
       throw new Error('ANTHROPIC_API_KEY not configured');
     }
 
-    const timeout = options.timeout || this.config.timeout;
+    // Validate and sanitize timeout to prevent resource exhaustion
+    const requestedTimeout = options.timeout || this.config.timeout;
+    const timeout = Math.min(Math.max(requestedTimeout, 1000), 300000); // Between 1s and 5min
     const maxRetries = options.maxRetries !== undefined ? options.maxRetries : this.config.maxRetries;
         
     try {
