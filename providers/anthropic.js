@@ -59,6 +59,7 @@ class AnthropicProvider extends BaseProvider {
 
   async _makeRequest(prompt, options, timeout) {
     const controller = new AbortController();
+    // timeout is already validated in send() method (1s-5min range)
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
