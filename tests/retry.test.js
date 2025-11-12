@@ -162,7 +162,7 @@ async function testRetryWithCallback() {
   const result = await retry(fn, {
     maxAttempts: 3,
     baseDelayMs: 10,
-    onRetry: (error, attempt, delay) => {
+    onRetry: (error, attempt, _delay) => {
       retryCallbacks++;
       assert(error.message === 'Temporary failure', 'Should receive error');
       assert(attempt === 1, 'Should be first retry');

@@ -68,59 +68,59 @@ app.post('/api/consensus', async (req, res) => {
     let synthesisMethod = null;
     // モード別処理
     switch(mode) {
-      case 'integration':
-        console.log(`[GPT-4 Integration Mode]`);
-        const integrationResult = await integrateWithGPT(prompt, candidates);
-        finalAnswer = integrationResult.final;
-        judgeInfo = {
-          name: "Isabelle",
-          model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-          reason: integrationResult.reason,
-          method: 'integration',
-          decision: 'INTEGRATED',
-          insights: integrationResult.insights
+    case 'integration':
+      console.log('[GPT-4 Integration Mode]');
+      const integrationResult = await integrateWithGPT(prompt, candidates);
+      finalAnswer = integrationResult.final;
+      judgeInfo = {
+        name: 'Isabelle',
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        reason: integrationResult.reason,
+        method: 'integration',
+        decision: 'INTEGRATED',
+        insights: integrationResult.insights
+      };
+      synthesisMethod = 'gpt_integration';
+      break;
+    case 'synthesis':
+      console.log('[Advanced Synthesis Mode]');
+      const synthesisResult = await synthesizeResponses(prompt, candidates);
+      finalAnswer = synthesisResult.final;
+      judgeInfo = {
+        name: 'Isabelle',
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        reason: synthesisResult.reason,
+        method: 'synthesis',
+        insights: synthesisResult.insights,
+        decision: 'SYNTHESIZED'
+      };
+      synthesisMethod = 'advanced_synthesis';
+      break;
+    case 'consensus':
+    default:
+      if (agreementRatio >= 0.66) {
+        console.log(`[Consensus Reached: ${(agreementRatio * 100).toFixed(1)}%]`);
+        finalAnswer = validTexts[0] || 'No valid responses';
+        judgeInfo = { 
+          model: 'consensus', 
+          reason: `合議により一致度${(agreementRatio * 100).toFixed(1)}%で合意`,
+          decision: 'APPROVED'
         };
-        synthesisMethod = 'gpt_integration';
-        break;
-      case 'synthesis':
-        console.log(`[Advanced Synthesis Mode]`);
-        const synthesisResult = await synthesizeResponses(prompt, candidates);
-        finalAnswer = synthesisResult.final;
+        synthesisMethod = 'majority_consensus';
+      } else {
+        console.log('[GPT-4 Arbitration Required]');
+        const openai = new OpenAIProvider();
+        const judgeResult = await openai.judge(prompt, candidates);
+        finalAnswer = judgeResult.final;
         judgeInfo = {
-          name: "Isabelle",
+          name: 'Isabelle',
           model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-          reason: synthesisResult.reason,
-          method: 'synthesis',
-          insights: synthesisResult.insights,
-          decision: 'SYNTHESIZED'
+          reason: judgeResult.reason,
+          winner: judgeResult.winner,
+          decision: 'ARBITRATED'
         };
-        synthesisMethod = 'advanced_synthesis';
-        break;
-      case 'consensus':
-      default:
-        if (agreementRatio >= 0.66) {
-          console.log(`[Consensus Reached: ${(agreementRatio * 100).toFixed(1)}%]`);
-          finalAnswer = validTexts[0] || 'No valid responses';
-          judgeInfo = { 
-            model: 'consensus', 
-            reason: `合議により一致度${(agreementRatio * 100).toFixed(1)}%で合意`,
-            decision: 'APPROVED'
-          };
-          synthesisMethod = 'majority_consensus';
-        } else {
-          console.log(`[GPT-4 Arbitration Required]`);
-          const openai = new OpenAIProvider();
-          const judgeResult = await openai.judge(prompt, candidates);
-          finalAnswer = judgeResult.final;
-          judgeInfo = {
-          name: "Isabelle",
-            model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-            reason: judgeResult.reason,
-            winner: judgeResult.winner,
-            decision: 'ARBITRATED'
-          };
-          synthesisMethod = 'gpt_arbitration';
-        }
+        synthesisMethod = 'gpt_arbitration';
+      }
     }
     const totalTime = Date.now() - startTime;
     
@@ -169,7 +169,7 @@ ${candidates.map(c => `${c.magi_unit} (${c.role}): ${c.ok ? c.text : '[エラー
   
   return {
     final: response || 'Integration failed',
-    reason: "GPT-4による統合判断",
+    reason: 'GPT-4による統合判断',
     insights: []
   };
 }
@@ -196,7 +196,7 @@ ${candidates.map(c => `${c.magi_unit}: ${c.ok ? c.text : '[エラー]'}`).join('
   
   return {
     final: response || 'Synthesis failed',
-    reason: "高度な合成による判断",
+    reason: '高度な合成による判断',
     insights: {}
   };
 }
@@ -237,23 +237,23 @@ module.exports = app;
 // ===============================================
 // ====== MAGI DECISION MODE (SINGLE) ======
 app.post('/api/decision', async (req, res) => {
-    console.log('[DECISION] Request received');
-    const { prompt } = req.body;
+  console.log('[DECISION] Request received');
+  const { prompt } = req.body;
     
-    if (!prompt) {
-        return res.status(400).json({ error: 'Prompt required' });
-    }
+  if (!prompt) {
+    return res.status(400).json({ error: 'Prompt required' });
+  }
     
-    const decision = prompt.toLowerCase().includes('should') ? '承認' : '否認';
+  const decision = prompt.toLowerCase().includes('should') ? '承認' : '否認';
     
-    res.json({
-        final: decision,
-        reason: 'Test decision',
-        units: [
-            { magi_unit: 'BALTHASAR-2', decision: decision },
-            { magi_unit: 'MELCHIOR-1', decision: decision },
-            { magi_unit: 'CASPER-3', decision: decision }
-        ]
-    });
+  res.json({
+    final: decision,
+    reason: 'Test decision',
+    units: [
+      { magi_unit: 'BALTHASAR-2', decision: decision },
+      { magi_unit: 'MELCHIOR-1', decision: decision },
+      { magi_unit: 'CASPER-3', decision: decision }
+    ]
+  });
 });
 console.log('✅ Decision endpoint registered');
