@@ -50,39 +50,25 @@ app.post('/api/consensus', async (req, res) => {
 
     console.log(`[${traceId}] Processing ${mode} mode for: ${prompt.substring(0, 50)}...`);
 
-    // Global request timeout
-    const requestTimeout = parseInt(process.env.REQUEST_TIMEOUT_MS || '60000', 10);
+    // Global request timeout - use provider timeout instead of global
+    const requestTimeout = parseInt(process.env.REQUEST_TIMEOUT_MS || '45000', 10);
     const controller = new AbortController();
-    
-    // Set up timeout promise
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        controller.abort();
-        reject(new Error(`Request timeout after ${requestTimeout}ms`));
-      }, requestTimeout);
-    });
+    const timeoutId = setTimeout(() => controller.abort(), requestTimeout);
 
-    // Execute parallel requests to all AI providers with timeout control
-    const providersPromise = Promise.allSettled([
-      grok.chat(prompt, meta).catch(err => {
-        console.error(`[${traceId}] Grok error:`, err.message);
-        throw err;
-      }),
-      gemini.chat(prompt, meta).catch(err => {
-        console.error(`[${traceId}] Gemini error:`, err.message);
-        throw err;
-      }),
-      anthropic.chat(prompt, meta).catch(err => {
-        console.error(`[${traceId}] Anthropic error:`, err.message);
-        throw err;
-      })
-    ]);
+    try {
+      // Execute parallel requests to all AI providers with unified timeout control
+      const metaWithSignal = { ...meta, signal: controller.signal, timeout: requestTimeout };
+      
+      const results = await Promise.allSettled([
+        grok.chat(prompt, metaWithSignal),
+        gemini.chat(prompt, metaWithSignal),
+        anthropic.chat(prompt, metaWithSignal)
+      ]);
+      
+      clearTimeout(timeoutId);
 
-    // Race between providers and timeout
-    const results = await Promise.race([providersPromise, timeoutPromise]);
-
-    // Format responses
-    const candidates = [
+      // Format responses
+      const candidates = [
       {
         provider: 'grok',
         magi_unit: 'BALTHASAR-2',
@@ -109,113 +95,118 @@ app.post('/api/consensus', async (req, res) => {
       }
     ];
 
-    // Calculate metrics
-    const validResponses = candidates.filter(c => c.ok);
-    const minValidResponses = parseInt(process.env.MIN_VALID_RESPONSES || '1', 10);
-    
-    // Check if we have minimum required valid responses
-    if (validResponses.length < minValidResponses) {
-      console.error(`[${traceId}] Insufficient valid responses: ${validResponses.length}/${minValidResponses}`);
-      return res.status(503).json({
-        error: 'Service temporarily unavailable',
-        message: `Insufficient valid responses from providers (${validResponses.length}/${minValidResponses})`,
-        traceId,
+      // Calculate metrics
+      const validResponses = candidates.filter(c => c.ok);
+      const minValidResponses = parseInt(process.env.MIN_VALID_RESPONSES || '1', 10);
+      
+      // Check if we have minimum required valid responses
+      if (validResponses.length < minValidResponses) {
+        console.error(`[${traceId}] Insufficient valid responses: ${validResponses.length}/${minValidResponses}`);
+        return res.status(503).json({
+          error: 'Service temporarily unavailable',
+          message: `Insufficient valid responses from providers (${validResponses.length}/${minValidResponses})`,
+          traceId,
+          candidates,
+          version: '2.0.0'
+        });
+      }
+      
+      const metrics = {
+        response_time_ms: Date.now() - startTime,
+        valid_responses: validResponses.length,
+        agreement_ratio: validResponses.length / 3,
+        timestamp: new Date().toISOString(),
+        traceId
+      };
+
+      let final = '';
+      let judge = {
+        model: 'gpt-4o-mini',
+        method: mode
+      };
+
+      // Process based on mode
+      if (mode === 'consensus') {
+        // CONSENSUS MODE - Simple implementation without openai.judge
+        if (validResponses.length === 0) {
+          final = 'Error: No valid responses from AI units';
+          judge.method = 'consensus-failed';
+        } else if (validResponses.length === 1) {
+            final = validResponses[0].text;
+          judge.method = 'consensus-single';
+          judge.winner = validResponses[0].provider;
+        } else {
+          // Use first valid response for now (simple implementation)
+          final = validResponses[0].text;
+          judge.method = 'consensus-first';
+          judge.winner = validResponses[0].provider;
+          judge.reason = 'Using first valid response';
+        }
+        
+      } else if (mode === 'integration') {
+        // INTEGRATION MODE - Use GPT-4 to integrate responses
+        if (validResponses.length === 0) {
+          final = 'Error: No valid responses to integrate';
+          judge.method = 'integration-failed';
+        } else {
+          try {
+            const integrationPrompt = `統合して最適な回答を提供してください：\n\n${
+              validResponses.map(r => `[${r.magi_unit}]: ${r.text}`).join('\n\n')
+            }`;
+            
+            final = await openai.chat(integrationPrompt, { temperature: 0.3 });
+            judge.method = 'integration';
+            judge.name = 'Isabelle';
+            judge.reason = 'Integrated all valid responses';
+          } catch (err) {
+            console.error(`[${traceId}] Integration error:`, err.message);
+            final = validResponses[0].text;
+            judge.method = 'integration-fallback';
+          }
+        }
+        
+      } else if (mode === 'synthesis') {
+        // SYNTHESIS MODE - Creative synthesis
+        if (validResponses.length === 0) {
+          final = 'Error: No valid responses for synthesis';
+          judge.method = 'synthesis-failed';
+        } else {
+          try {
+            const synthesisPrompt = `以下の分析を創造的に統合してください：\n\n${
+              validResponses.map(r => `[${r.magi_unit}]: ${r.text}`).join('\n\n')
+            }`;
+            
+            final = await openai.chat(synthesisPrompt, { temperature: 0.7 });
+            judge.method = 'synthesis';
+            judge.name = 'Isabelle';
+            judge.reason = 'Creative synthesis completed';
+          } catch (err) {
+            console.error(`[${traceId}] Synthesis error:`, err.message);
+            final = validResponses[0].text;
+            judge.method = 'synthesis-fallback';
+          }
+        }
+        
+      } else {
+        // Default to integration mode
+        final = validResponses.length > 0 ? validResponses[0].text : 'Error: Invalid mode';
+        judge.method = 'default';
+      }
+
+      // Send response
+      res.json({
+        version: '2.0.0',
+        final,
+        mode,
+        judge,
         candidates,
-        version: '2.0.0'
+        metrics
       });
+
+    } catch (innerError) {
+      clearTimeout(timeoutId);
+      throw innerError;
     }
-    
-    const metrics = {
-      response_time_ms: Date.now() - startTime,
-      valid_responses: validResponses.length,
-      agreement_ratio: validResponses.length / 3,
-      timestamp: new Date().toISOString(),
-      traceId
-    };
-
-    let final = '';
-    let judge = {
-      model: 'gpt-4o-mini',
-      method: mode
-    };
-
-    // Process based on mode
-    if (mode === 'consensus') {
-      // CONSENSUS MODE - Simple implementation without openai.judge
-      if (validResponses.length === 0) {
-        final = 'Error: No valid responses from AI units';
-        judge.method = 'consensus-failed';
-      } else if (validResponses.length === 1) {
-        final = validResponses[0].text;
-        judge.method = 'consensus-single';
-        judge.winner = validResponses[0].provider;
-      } else {
-        // Use first valid response for now (simple implementation)
-        final = validResponses[0].text;
-        judge.method = 'consensus-first';
-        judge.winner = validResponses[0].provider;
-        judge.reason = 'Using first valid response';
-      }
-      
-    } else if (mode === 'integration') {
-      // INTEGRATION MODE - Use GPT-4 to integrate responses
-      if (validResponses.length === 0) {
-        final = 'Error: No valid responses to integrate';
-        judge.method = 'integration-failed';
-      } else {
-        try {
-          const integrationPrompt = `統合して最適な回答を提供してください：\n\n${
-            validResponses.map(r => `[${r.magi_unit}]: ${r.text}`).join('\n\n')
-          }`;
-          
-          final = await openai.chat(integrationPrompt, { temperature: 0.3 });
-          judge.method = 'integration';
-          judge.name = 'Isabelle';
-          judge.reason = 'Integrated all valid responses';
-        } catch (err) {
-          console.error('Integration error:', err);
-          final = validResponses[0].text;
-          judge.method = 'integration-fallback';
-        }
-      }
-      
-    } else if (mode === 'synthesis') {
-      // SYNTHESIS MODE - Creative synthesis
-      if (validResponses.length === 0) {
-        final = 'Error: No valid responses for synthesis';
-        judge.method = 'synthesis-failed';
-      } else {
-        try {
-          const synthesisPrompt = `以下の分析を創造的に統合してください：\n\n${
-            validResponses.map(r => `[${r.magi_unit}]: ${r.text}`).join('\n\n')
-          }`;
-          
-          final = await openai.chat(synthesisPrompt, { temperature: 0.7 });
-          judge.method = 'synthesis';
-          judge.name = 'Isabelle';
-          judge.reason = 'Creative synthesis completed';
-        } catch (err) {
-          console.error('Synthesis error:', err);
-          final = validResponses[0].text;
-          judge.method = 'synthesis-fallback';
-        }
-      }
-      
-    } else {
-      // Default to integration mode
-      final = validResponses.length > 0 ? validResponses[0].text : 'Error: Invalid mode';
-      judge.method = 'default';
-    }
-
-    // Send response
-    res.json({
-      version: '2.0.0',
-      final,
-      mode,
-      judge,
-      candidates,
-      metrics
-    });
 
   } catch (error) {
     const traceIdFallback = `trace-${Date.now()}-${Math.random().toString(36).substring(7)}`;
