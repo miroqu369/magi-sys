@@ -5,7 +5,7 @@
   "main": "bootstrap.js",
   "scripts": {
     "start": "node bootstrap.js",
-    "test": "curl http://localhost:8080/status"
+    "test": "node tests/retry.test.js && node tests/base-provider.test.js"
   },
   "dependencies": {
     "@google-cloud/secret-manager": "^5.0.0",

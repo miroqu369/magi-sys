@@ -28,9 +28,8 @@ Thumbs.db
 *.swp
 *.swo
 
-# Test files
+# Test files (allow tests/ directory)
 test/
-*.test.js
 
 # Build files
 dist/
