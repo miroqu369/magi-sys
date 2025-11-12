@@ -37,6 +37,7 @@ app.get('/health', (req, res) => {
 // Main consensus API endpoint
 app.post('/api/consensus', async (req, res) => {
   const startTime = Date.now();
+  const traceId = `trace-${Date.now()}-${Math.random().toString(36).substring(7)}`;
   
   try {
     const { prompt } = req.body;
@@ -44,17 +45,41 @@ app.post('/api/consensus', async (req, res) => {
     const mode = meta.mode || 'integration';
     
     if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
+      return res.status(400).json({ error: 'Prompt is required', traceId });
     }
 
-    console.log(`Processing ${mode} mode for: ${prompt.substring(0, 50)}...`);
+    console.log(`[${traceId}] Processing ${mode} mode for: ${prompt.substring(0, 50)}...`);
 
-    // Execute parallel requests to all AI providers
-    const results = await Promise.allSettled([
-      grok.chat(prompt, meta),
-      gemini.chat(prompt, meta),
-      anthropic.chat(prompt, meta)
+    // Global request timeout
+    const requestTimeout = parseInt(process.env.REQUEST_TIMEOUT_MS || '60000', 10);
+    const controller = new AbortController();
+    
+    // Set up timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        controller.abort();
+        reject(new Error(`Request timeout after ${requestTimeout}ms`));
+      }, requestTimeout);
+    });
+
+    // Execute parallel requests to all AI providers with timeout control
+    const providersPromise = Promise.allSettled([
+      grok.chat(prompt, meta).catch(err => {
+        console.error(`[${traceId}] Grok error:`, err.message);
+        throw err;
+      }),
+      gemini.chat(prompt, meta).catch(err => {
+        console.error(`[${traceId}] Gemini error:`, err.message);
+        throw err;
+      }),
+      anthropic.chat(prompt, meta).catch(err => {
+        console.error(`[${traceId}] Anthropic error:`, err.message);
+        throw err;
+      })
     ]);
+
+    // Race between providers and timeout
+    const results = await Promise.race([providersPromise, timeoutPromise]);
 
     // Format responses
     const candidates = [
@@ -63,31 +88,49 @@ app.post('/api/consensus', async (req, res) => {
         magi_unit: 'BALTHASAR-2',
         role: '創造的・革新的分析',
         ok: results[0].status === 'fulfilled',
-        text: results[0].status === 'fulfilled' ? results[0].value : 'Error: No response'
+        text: results[0].status === 'fulfilled' ? results[0].value : 'Error: No response',
+        error: results[0].status === 'rejected' ? results[0].reason?.message : null
       },
       {
         provider: 'gemini',
         magi_unit: 'MELCHIOR-1',
         role: '論理的・科学的分析',
         ok: results[1].status === 'fulfilled',
-        text: results[1].status === 'fulfilled' ? results[1].value : 'Error: No response'
+        text: results[1].status === 'fulfilled' ? results[1].value : 'Error: No response',
+        error: results[1].status === 'rejected' ? results[1].reason?.message : null
       },
       {
         provider: 'claude',
         magi_unit: 'CASPER-3',
         role: '人間的・感情的分析',
         ok: results[2].status === 'fulfilled',
-        text: results[2].status === 'fulfilled' ? results[2].value : 'Error: No response'
+        text: results[2].status === 'fulfilled' ? results[2].value : 'Error: No response',
+        error: results[2].status === 'rejected' ? results[2].reason?.message : null
       }
     ];
 
     // Calculate metrics
     const validResponses = candidates.filter(c => c.ok);
+    const minValidResponses = parseInt(process.env.MIN_VALID_RESPONSES || '1', 10);
+    
+    // Check if we have minimum required valid responses
+    if (validResponses.length < minValidResponses) {
+      console.error(`[${traceId}] Insufficient valid responses: ${validResponses.length}/${minValidResponses}`);
+      return res.status(503).json({
+        error: 'Service temporarily unavailable',
+        message: `Insufficient valid responses from providers (${validResponses.length}/${minValidResponses})`,
+        traceId,
+        candidates,
+        version: '2.0.0'
+      });
+    }
+    
     const metrics = {
       response_time_ms: Date.now() - startTime,
       valid_responses: validResponses.length,
       agreement_ratio: validResponses.length / 3,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      traceId
     };
 
     let final = '';
@@ -175,10 +218,13 @@ app.post('/api/consensus', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('API Error:', error);
+    const traceIdFallback = `trace-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const errorTraceId = error.traceId || traceIdFallback;
+    console.error(`[${errorTraceId}] API Error:`, error.message, error.stack);
     res.status(500).json({
       error: 'Internal server error',
       message: error.message,
+      traceId: errorTraceId,
       version: '2.0.0'
     });
   }
