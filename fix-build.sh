@@ -9,7 +9,7 @@ echo "║    Fixing Build Error & Redeploying    ║"
 echo "╚════════════════════════════════════════╝"
 echo ""
 
-cd ~/magi-system
+cd ~/magi-core
 
 # ====================================
 # 1. 現在のbootstrap.jsを確認
@@ -50,7 +50,7 @@ app.get('/healthz', (_req, res) => {
 
 app.get('/status', (_req, res) => {
   res.json({
-    service: 'magi-system',
+    service: 'magi-core',
     version: '2.0.0',
     time: new Date().toISOString(),
     status: 'OPERATIONAL',

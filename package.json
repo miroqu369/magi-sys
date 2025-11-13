@@ -1,5 +1,5 @@
 {
-  "name": "dogma-system",
+  "name": "magi-core",
   "version": "2.0.0",
   "description": "MAGI Consensus LLM System with GPT Integration Modes",
   "main": "bootstrap.js",
@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/miroqu369/magi-sys.git"
+    "url": "git+https://github.com/miroqu369/magi-core.git"
   },
   "author": "miroqu369",
   "license": "MIT",

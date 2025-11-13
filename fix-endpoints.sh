@@ -9,7 +9,7 @@ echo "║    Fixing MAGI System Endpoints        ║"
 echo "╚════════════════════════════════════════╝"
 echo ""
 
-cd ~/magi-system
+cd ~/magi-core
 
 # ====================================
 # 1. 現在のbootstrap.jsを確認
@@ -47,7 +47,7 @@ app.get('/healthz', (req, res) => {
 app.get('/status', (req, res) => {
   console.log('Status endpoint called');
   res.json({
-    service: 'magi-system',
+    service: 'magi-core',
     version: '2.0.0',
     time: new Date().toISOString(),
     status: 'OPERATIONAL',

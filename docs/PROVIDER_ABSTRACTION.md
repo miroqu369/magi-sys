@@ -1,6 +1,6 @@
 # Provider Abstraction and Robustness Features
 
-This document describes the provider abstraction layer and robustness features added to the magi-sys project.
+This document describes the provider abstraction layer and robustness features added to the magi-core project.
 
 ## Overview
 

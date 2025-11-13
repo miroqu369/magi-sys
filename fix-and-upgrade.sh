@@ -15,7 +15,7 @@ PROJECT_ID=screen-share-459802
 REGION=asia-northeast1
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
-cd ~/magi-system
+cd ~/magi-core
 
 # ====================================
 # STEP 1: Git初期化とGitHub接続
@@ -350,7 +350,7 @@ SERVERJS
 echo "📝 package.json を v2.0 に更新..."
 cat > package.json << 'PACKAGEJSON'
 {
-  "name": "magi-system",
+  "name": "magi-core",
   "version": "2.0.0",
   "description": "MAGI Consensus LLM System with GPT Integration Modes",
   "main": "bootstrap.js",
@@ -367,7 +367,7 @@ cat > package.json << 'PACKAGEJSON'
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/miroqu369/magi-sys.git"
+    "url": "git+https://github.com/miroqu369/magi-core.git"
   },
   "author": "miroqu369",
   "license": "MIT"
@@ -448,9 +448,9 @@ git commit -m "🚀 feat: MAGI System v2.0 - Complete implementation
 # GitHubリモート設定
 echo ""
 echo "🌐 GitHubリモートを設定..."
-git remote add origin https://github.com/miroqu369/magi-sys.git 2>/dev/null || {
+git remote add origin https://github.com/miroqu369/magi-core.git 2>/dev/null || {
     echo "リモート既存のため更新..."
-    git remote set-url origin https://github.com/miroqu369/magi-sys.git
+    git remote set-url origin https://github.com/miroqu369/magi-core.git
 }
 
 echo "✅ Git設定完了"
