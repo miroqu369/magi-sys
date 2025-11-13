@@ -4,7 +4,7 @@ const path = require('path');
 
 // ポートは必ず環境変数から取得
 const PORT = parseInt(process.env.PORT) || 8080;
-console.log(`Starting DOGMA System on port ${PORT}`);
+console.log(`Starting MAGI Core on port ${PORT}`);
 
 // Express app作成
 const app = express();
@@ -21,7 +21,7 @@ app.get('/health', (req, res) => {
 
 app.get('/status', (req, res) => {
   res.json({
-    service: 'DOGMA System',
+    service: 'MAGI Core',
     version: '2.0.0',
     port: PORT,
     time: new Date().toISOString(),
@@ -42,9 +42,9 @@ global.app = app;
 // server.jsを読み込み
 try {
   require('./server.js');
-  console.log('Server.js loaded successfully');
+  console.log('✅ Server.js loaded successfully');
 } catch (err) {
-  console.error('Error loading server.js:', err.message);
+  console.error('❌ Error loading server.js:', err.message);
 }
 
 // 静的ファイル
@@ -52,13 +52,14 @@ app.use(express.static('public'));
 
 // ルート
 app.get('/', (req, res) => {
-  res.send('DOGMA System Online - Port: ' + PORT);
+  res.send('MAGI Core Online - Port: ' + PORT);
 });
 
 // サーバー起動（ポートを明示的に指定）
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`DOGMA System listening on port ${PORT}`);
-  console.log(`Environment PORT: ${process.env.PORT}`);
+  console.log(`🚀 MAGI Core listening on port ${PORT}`);
+  console.log(`📍 Environment PORT: ${process.env.PORT}`);
+  console.log(`🌐 Open Web Preview on port ${PORT}`);
 });
 
 // グレースフルシャットダウン
