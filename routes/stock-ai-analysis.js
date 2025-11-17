@@ -1,6 +1,11 @@
 'use strict';
+const { BigQuery } = require('@google-cloud/bigquery');
 
 module.exports = async (req, res) => {
+  const bigquery = new BigQuery({
+    projectId: process.env.GCP_PROJECT_ID || 'screen-share-459802'
+  });
+
   try {
     const { ticker } = req.params;
     const opts = req.body || {};
@@ -14,24 +19,18 @@ module.exports = async (req, res) => {
 
     const prompt = analysisResult.prompt;
 
-    // 2. LLMプロバイダー読み込み（パス修正）
+    // 2. LLMプロバイダー読み込み
     console.log(`[AI Analysis] Loading LLM providers...`);
     let grok, gemini, claude, openai;
     try {
-      // providers/ 直下から読み込み（存在確認後）
       try {
         const Grok = require('../providers/llm/grok');
         grok = new Grok();
         console.log(`[AI Analysis] Grok loaded from providers/llm/`);
       } catch (e1) {
-        try {
-          const Grok = require('../providers/grok');
-          grok = new Grok();
-          console.log(`[AI Analysis] Grok loaded from providers/`);
-        } catch (e2) {
-          console.warn(`[AI Analysis] Grok not available`);
-          grok = null;
-        }
+        const Grok = require('../providers/grok');
+        grok = new Grok();
+        console.log(`[AI Analysis] Grok loaded from providers/`);
       }
 
       try {
@@ -39,14 +38,9 @@ module.exports = async (req, res) => {
         gemini = new Gemini();
         console.log(`[AI Analysis] Gemini loaded from providers/llm/`);
       } catch (e1) {
-        try {
-          const Gemini = require('../providers/gemini');
-          gemini = new Gemini();
-          console.log(`[AI Analysis] Gemini loaded from providers/`);
-        } catch (e2) {
-          console.warn(`[AI Analysis] Gemini not available`);
-          gemini = null;
-        }
+        const Gemini = require('../providers/gemini');
+        gemini = new Gemini();
+        console.log(`[AI Analysis] Gemini loaded from providers/`);
       }
 
       try {
@@ -54,14 +48,9 @@ module.exports = async (req, res) => {
         claude = new Claude();
         console.log(`[AI Analysis] Claude loaded from providers/llm/`);
       } catch (e1) {
-        try {
-          const Claude = require('../providers/anthropic');
-          claude = new Claude();
-          console.log(`[AI Analysis] Claude loaded from providers/`);
-        } catch (e2) {
-          console.warn(`[AI Analysis] Claude not available`);
-          claude = null;
-        }
+        const Claude = require('../providers/anthropic');
+        claude = new Claude();
+        console.log(`[AI Analysis] Claude loaded from providers/`);
       }
 
       try {
@@ -69,13 +58,9 @@ module.exports = async (req, res) => {
         openai = new OpenAI();
         console.log(`[AI Analysis] OpenAI loaded from providers/llm/`);
       } catch (e1) {
-        try {
-          const OpenAI = require('../providers/openai');
-          openai = new OpenAI();
-          console.log(`[AI Analysis] OpenAI loaded from providers/`);
-        } catch (e2) {
-          throw new Error('OpenAI provider not found');
-        }
+        const OpenAI = require('../providers/openai');
+        openai = new OpenAI();
+        console.log(`[AI Analysis] OpenAI loaded from providers/`);
       }
 
       if (!grok || !gemini || !claude) {
@@ -220,6 +205,42 @@ JSON形式のみで返してください。
     };
 
     console.log(`[AI Analysis] Complete: ${ticker} = ${result.final_output.decision}`);
+
+    // ========== NEW: BigQuery に保存 ==========
+    console.log(`[BQ] Saving to BigQuery...`);
+    try {
+      const dataset = bigquery.dataset('magi_analysis');
+      const table = dataset.table('stock_ai_analysis');
+
+      const rows = [{
+        timestamp: new Date(),
+        ticker: result.ticker,
+        current_price: result.data_analysis.current_price,
+        currency: result.data_analysis.currency,
+        trend: result.data_analysis.trend,
+        volatility: parseFloat(result.data_analysis.volatility),
+        change_pct: parseFloat(result.data_analysis.change_pct),
+        data_provider: result.data_analysis.provider,
+        grok_response: grokResult.text || null,
+        gemini_response: geminiResult.text || null,
+        claude_response: claudeResult.text || null,
+        grok_ok: grokResult.ok,
+        gemini_ok: geminiResult.ok,
+        claude_ok: claudeResult.ok,
+        agreement_ratio: agreementRatio,
+        final_judgment: result.consensus.judgment,
+        confidence: result.consensus.confidence,
+        key_points: JSON.stringify(result.consensus.key_points),
+        risks: JSON.stringify(result.consensus.risks),
+        recommendation: result.consensus.recommendation
+      }];
+
+      await table.insert(rows);
+      console.log(`[BQ] Saved OK`);
+    } catch (e) {
+      console.error(`[BQ] Save failed (non-blocking):`, e.message);
+      // BigQuery 保存失敗でもレスポンスは返す
+    }
 
     res.json({
       success: true,
