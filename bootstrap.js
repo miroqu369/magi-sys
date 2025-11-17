@@ -10,16 +10,36 @@ app.use(express.json({ limit: '1mb' }));
 // ========== 2) Data Manager初期化 ==========
 global.dataManager = new DataManager();
 
-// Yahoo Finance プロバイダー登録（ダミー - 既存コード流用可）
-const YahooProvider = require('./providers/data/base');
+// === Mock プロバイダー登録 ===
+const MockProvider = require('./providers/data/mock');
+global.dataManager.register('mock', MockProvider, {
+  timeout: 5000
+});
+
+// === Yahoo Finance プロバイダー登録（API key あれば） ===
 if (process.env.YAHOO_API_KEY) {
-  global.dataManager.register('yahoo', YahooProvider, {
-    apiKey: process.env.YAHOO_API_KEY,
-    timeout: 5000
-  });
-} else {
-  console.warn('⚠ YAHOO_API_KEY not set - using mock provider');
-  global.dataManager.register('mock', YahooProvider, { timeout: 5000 });
+  try {
+    const YahooProvider = require('./providers/data/yahoo-finance');
+    global.dataManager.register('yahoo', YahooProvider, {
+      apiKey: process.env.YAHOO_API_KEY,
+      timeout: 5000
+    });
+  } catch (e) {
+    console.warn('⚠ Yahoo provider not available');
+  }
+}
+
+// === Finnhub プロバイダー登録（API key あれば） ===
+if (process.env.FINNHUB_API_KEY) {
+  try {
+    const FinnhubProvider = require('./providers/data/finnhub');
+    global.dataManager.register('finnhub', FinnhubProvider, {
+      apiKey: process.env.FINNHUB_API_KEY,
+      timeout: 5000
+    });
+  } catch (e) {
+    console.warn('⚠ Finnhub provider not available');
+  }
 }
 
 // ========== 3) Analytics Engine初期化 ==========
