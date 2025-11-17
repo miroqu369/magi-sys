@@ -17,11 +17,14 @@ app.post('/api/consensus', async (req, res) => {
   }
 });
 
-// ========== Data Provider Routes（新規） ==========
+// ========== Data Provider Routes（既存） ==========
 app.get('/api/providers', require('./routes/providers'));
 app.post('/api/providers/use/:name', require('./routes/use-provider'));
 
-// ========== Stock Analysis Routes（新規） ==========
+// ========== Stock Analysis Routes（既存） ==========
 app.post('/api/stock/analyze/:ticker', require('./routes/stock'));
+
+// ========== NEW: Stock Analysis with AI Consensus ==========
+app.post('/api/stock/ai-analysis/:ticker', require('./routes/stock-ai-analysis'));
 
 module.exports = app;
