@@ -7,20 +7,56 @@ class AnalyticsEngine {
 
   async analyzeStock(ticker, opts = {}) {
     try {
-      // 1. データ取得
-      const quote = await this.data.getQuote(ticker);
+      let quote, historicals, financials, news;
       
-      const endDate = new Date();
-      const startDate = new Date(Date.now() - 90*24*60*60*1000);
+      // 1. プライマリプロバイダーで試す
+      const currentProvider = this.data.active;
       
-      const historicals = await this.data.getHistorical(ticker, startDate, endDate);
-      const financials = await this.data.getFinancials(ticker);
-      const news = await this.data.getNews(ticker, 5);
+      try {
+        quote = await this.data.getQuote(ticker);
+      } catch (e) {
+        console.warn(`Primary provider (${currentProvider}) failed for quote: ${e.message}`);
+        
+        // フォールバック: mock に切り替え
+        if (currentProvider !== 'mock') {
+          console.log('Falling back to mock provider...');
+          this.data.use('mock');
+          quote = await this.data.getQuote(ticker);
+        } else {
+          throw e;
+        }
+      }
 
-      // 2. メトリクス計算
+      // 2. 履歴データ取得
+      try {
+        const endDate = new Date();
+        const startDate = new Date(Date.now() - 90*24*60*60*1000);
+        historicals = await this.data.getHistorical(ticker, startDate, endDate);
+      } catch (e) {
+        console.warn(`Historical data fetch failed: ${e.message}`);
+        historicals = [];
+      }
+
+      // 3. 財務データ取得
+      try {
+        financials = await this.data.getFinancials(ticker);
+      } catch (e) {
+        console.warn(`Financials fetch failed: ${e.message}`);
+        financials = {};
+      }
+
+      // 4. ニュース取得
+      try {
+        news = await this.data.getNews(ticker, 5);
+      } catch (e) {
+        console.warn(`News fetch failed: ${e.message}`);
+        news = [];
+      }
+
+      // 5. メトリクス計算
       const metrics = this.calculateMetrics(quote, historicals, financials);
 
-      // 3. プロンプト組成
+      // 6. プロンプト組成
       const prompt = `
 【企業分析リクエスト】
 銘柄: ${ticker}
@@ -48,9 +84,11 @@ ${news.map((n, i) => `${i+1}. ${n.title} (${n.date})`).join('\n')}
         prompt,
         news,
         financials,
+        dataProvider: this.data.active,
         timestamp: new Date().toISOString()
       };
     } catch (e) {
+      console.error('Stock analysis failed:', e.message);
       throw new Error(`Stock analysis failed: ${e.message}`);
     }
   }
