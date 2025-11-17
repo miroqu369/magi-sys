@@ -5,138 +5,212 @@ module.exports = async (req, res) => {
     const { ticker } = req.params;
     const opts = req.body || {};
 
-    // 1. Stock Analysis を実行（データ取得 + メトリクス計算）
-    const analysisResult = await global.analyticsEngine.analyzeStock(ticker, opts);
+    console.log(`[AI Analysis] Start: ${ticker}`);
 
-    // 2. LLM合議用プロンプトを抽出
+    // 1. Stock Analysis を実行
+    console.log(`[AI Analysis] Fetching stock data...`);
+    const analysisResult = await global.analyticsEngine.analyzeStock(ticker, opts);
+    console.log(`[AI Analysis] Stock data OK: ${analysisResult.ticker}`);
+
     const prompt = analysisResult.prompt;
 
-    // 3. LLM合議を実行
-    // 既存の consensus エンドポイントと同じロジック
-    const Grok = require('../providers/llm/grok');
-    const Gemini = require('../providers/llm/gemini');
-    const Claude = require('../providers/llm/anthropic');
-    const OpenAI = require('../providers/llm/openai');
+    // 2. LLMプロバイダー読み込み（パス修正）
+    console.log(`[AI Analysis] Loading LLM providers...`);
+    let grok, gemini, claude, openai;
+    try {
+      // providers/ 直下から読み込み（存在確認後）
+      try {
+        const Grok = require('../providers/llm/grok');
+        grok = new Grok();
+        console.log(`[AI Analysis] Grok loaded from providers/llm/`);
+      } catch (e1) {
+        try {
+          const Grok = require('../providers/grok');
+          grok = new Grok();
+          console.log(`[AI Analysis] Grok loaded from providers/`);
+        } catch (e2) {
+          console.warn(`[AI Analysis] Grok not available`);
+          grok = null;
+        }
+      }
 
-    // プロバイダーインスタンス化
-    const grok = new Grok();
-    const gemini = new Gemini();
-    const claude = new Claude();
-    const openai = new OpenAI();
+      try {
+        const Gemini = require('../providers/llm/gemini');
+        gemini = new Gemini();
+        console.log(`[AI Analysis] Gemini loaded from providers/llm/`);
+      } catch (e1) {
+        try {
+          const Gemini = require('../providers/gemini');
+          gemini = new Gemini();
+          console.log(`[AI Analysis] Gemini loaded from providers/`);
+        } catch (e2) {
+          console.warn(`[AI Analysis] Gemini not available`);
+          gemini = null;
+        }
+      }
 
-    // 4. 3つのAIを並列実行
+      try {
+        const Claude = require('../providers/llm/anthropic');
+        claude = new Claude();
+        console.log(`[AI Analysis] Claude loaded from providers/llm/`);
+      } catch (e1) {
+        try {
+          const Claude = require('../providers/anthropic');
+          claude = new Claude();
+          console.log(`[AI Analysis] Claude loaded from providers/`);
+        } catch (e2) {
+          console.warn(`[AI Analysis] Claude not available`);
+          claude = null;
+        }
+      }
+
+      try {
+        const OpenAI = require('../providers/llm/openai');
+        openai = new OpenAI();
+        console.log(`[AI Analysis] OpenAI loaded from providers/llm/`);
+      } catch (e1) {
+        try {
+          const OpenAI = require('../providers/openai');
+          openai = new OpenAI();
+          console.log(`[AI Analysis] OpenAI loaded from providers/`);
+        } catch (e2) {
+          throw new Error('OpenAI provider not found');
+        }
+      }
+
+      if (!grok || !gemini || !claude) {
+        throw new Error('Not all AI providers available');
+      }
+
+    } catch (e) {
+      console.error(`[AI Analysis] Provider load failed:`, e.message);
+      throw e;
+    }
+
+    // 3. 3つのAIを並列実行
+    console.log(`[AI Analysis] Running 3-AI consensus...`);
     const [grokResult, geminiResult, claudeResult] = await Promise.all([
       grok.chat(prompt, { temperature: opts.temperature || 0.3 })
-        .then(text => ({ provider: 'grok', ok: true, text }))
-        .catch(err => ({ provider: 'grok', ok: false, error: err.message })),
+        .then(text => {
+          console.log(`[AI Analysis] Grok OK (${text.length} chars)`);
+          return { provider: 'grok', ok: true, text };
+        })
+        .catch(err => {
+          console.error(`[AI Analysis] Grok FAILED:`, err.message);
+          return { provider: 'grok', ok: false, error: err.message };
+        }),
       gemini.chat(prompt, { temperature: opts.temperature || 0.3 })
-        .then(text => ({ provider: 'gemini', ok: true, text }))
-        .catch(err => ({ provider: 'gemini', ok: false, error: err.message })),
+        .then(text => {
+          console.log(`[AI Analysis] Gemini OK (${text.length} chars)`);
+          return { provider: 'gemini', ok: true, text };
+        })
+        .catch(err => {
+          console.error(`[AI Analysis] Gemini FAILED:`, err.message);
+          return { provider: 'gemini', ok: false, error: err.message };
+        }),
       claude.chat(prompt, { temperature: opts.temperature || 0.3 })
-        .then(text => ({ provider: 'claude', ok: true, text }))
-        .catch(err => ({ provider: 'claude', ok: false, error: err.message }))
+        .then(text => {
+          console.log(`[AI Analysis] Claude OK (${text.length} chars)`);
+          return { provider: 'claude', ok: true, text };
+        })
+        .catch(err => {
+          console.error(`[AI Analysis] Claude FAILED:`, err.message);
+          return { provider: 'claude', ok: false, error: err.message };
+        })
     ]);
 
-    console.log(`Stock AI Analysis Results:`);
-    console.log(`- Grok: ${grokResult.ok ? 'OK' : 'FAILED'}`);
-    console.log(`- Gemini: ${geminiResult.ok ? 'OK' : 'FAILED'}`);
-    console.log(`- Claude: ${claudeResult.ok ? 'OK' : 'FAILED'}`);
-
     const candidates = [grokResult, geminiResult, claudeResult];
-
-    // 5. 一致度を計算
     const validResponses = candidates.filter(c => c.ok);
+    console.log(`[AI Analysis] Valid responses: ${validResponses.length}/3`);
+
+    // 4. 一致度を計算
     const agreementRatio = validResponses.length > 1
       ? calculateSimilarity(validResponses.map(v => v.text))
       : 0.5;
 
-    // 6. GPT裁定（常に実行）
+    // 5. GPT裁定
+    console.log(`[AI Analysis] Running GPT judgment...`);
     const judgePrompt = `
 以下の3つのAIからの投資判断を受け取りました。
 
 【Grok】
-${grokResult.ok ? grokResult.text : '失敗'}
+${grokResult.ok ? grokResult.text : '利用不可'}
 
 【Gemini】
-${geminiResult.ok ? geminiResult.text : '失敗'}
+${geminiResult.ok ? geminiResult.text : '利用不可'}
 
 【Claude】
-${claudeResult.ok ? claudeResult.text : '失敗'}
+${claudeResult.ok ? claudeResult.text : '利用不可'}
 
-これらの分析を統合し、最終的な投資判断を以下のJSON形式で返してください：
+これらの分析を統合し、最終的な投資判断をJSON形式で返してください：
 {
-  "final_judgment": "最終的な投資判断（買い/売り/保有）",
-  "confidence": "信頼度（高/中/低）",
-  "key_points": ["ポイント1", "ポイント2", "ポイント3"],
-  "risks": ["リスク1", "リスク2"],
+  "final_judgment": "買い/売り/保有",
+  "confidence": "高/中/低",
+  "key_points": ["ポイント1", "ポイント2"],
+  "risks": ["リスク1"],
   "recommendation": "推奨アクション"
 }
 
-必ずJSON形式のみで返してください。
+JSON形式のみで返してください。
 `;
 
     const judgeResponse = await openai.chat(judgePrompt, { temperature: 0.2 });
+    console.log(`[AI Analysis] GPT judgment OK (${judgeResponse.length} chars)`);
 
     // JSON を抽出
     let judgeData = null;
     try {
-      // JSON部分を抽出（```json ... ``` があれば削除）
       const jsonMatch = judgeResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         judgeData = JSON.parse(jsonMatch[0]);
+        console.log(`[AI Analysis] JSON parsed OK`);
+      } else {
+        throw new Error('No JSON in response');
       }
     } catch (e) {
-      console.error('Judge JSON parse failed:', e.message);
+      console.error(`[AI Analysis] JSON parse failed:`, e.message);
       judgeData = {
-        final_judgment: 'Analysis Complete',
+        final_judgment: 'HOLD',
         confidence: 'medium',
-        key_points: ['See candidate responses'],
-        risks: [],
-        recommendation: 'Review all analyses'
+        key_points: ['分析完了'],
+        risks: ['パース問題'],
+        recommendation: '候補応答を参照'
       };
     }
 
-    // 7. 結果統合
+    // 6. 結果統合
     const result = {
       ticker,
       timestamp: new Date().toISOString(),
       mode: 'ai-analysis-with-consensus',
       
-      // ステップ1: データ分析
       data_analysis: {
         provider: analysisResult.dataProvider,
         current_price: analysisResult.quote.price,
         currency: analysisResult.quote.currency,
         trend: analysisResult.metrics.trend,
         volatility: analysisResult.metrics.volatility,
-        change_pct: analysisResult.metrics.change_pct,
-        ma50: analysisResult.metrics.ma50,
-        ma200: analysisResult.metrics.ma200
+        change_pct: analysisResult.metrics.change_pct
       },
 
-      // ステップ2: LLM分析結果
       ai_analysis: {
-        prompt: prompt,
         candidates: candidates.map(c => ({
           provider: c.provider,
           ok: c.ok,
-          text: c.text || c.error
+          text: c.text ? c.text.substring(0, 300) : c.error
         })),
         agreement_ratio: (agreementRatio * 100).toFixed(1)
       },
 
-      // ステップ3: GPT裁定（最終判断）
       consensus: {
         judge: 'gpt-4o-mini',
         judgment: judgeData.final_judgment,
         confidence: judgeData.confidence,
         key_points: judgeData.key_points,
         risks: judgeData.risks,
-        recommendation: judgeData.recommendation,
-        raw_response: judgeResponse
+        recommendation: judgeData.recommendation
       },
 
-      // ステップ4: 最終出力
       final_output: {
         ticker,
         decision: judgeData.final_judgment,
@@ -145,28 +219,29 @@ ${claudeResult.ok ? claudeResult.text : '失敗'}
       }
     };
 
+    console.log(`[AI Analysis] Complete: ${ticker} = ${result.final_output.decision}`);
+
     res.json({
       success: true,
       data: result
     });
 
   } catch (e) {
-    console.error('Stock AI Analysis error:', e);
+    console.error(`[AI Analysis] FATAL ERROR:`, e.message);
+    console.error(e.stack);
+    
     res.status(500).json({
       success: false,
-      error: e.message
+      error: e.message,
+      stack: process.env.NODE_ENV === 'development' ? e.stack : undefined
     });
   }
 };
 
-// ========== ヘルパー関数: テキスト類似度計算 ==========
 function calculateSimilarity(texts) {
   if (texts.length < 2) return 0.5;
-
-  // 簡易的な類似度（単語の重複度）
   const words = texts.map(t => t.toLowerCase().split(/\s+/));
   const intersection = new Set(words[0]).size;
   const union = new Set([...words[0], ...words[1]]).size;
-  
   return intersection / union;
 }
