@@ -15,21 +15,20 @@ const MockProvider = require('./providers/data/mock');
 global.dataManager.register('mock', MockProvider, {
   timeout: 5000
 });
+console.log('✓ Mock provider registered');
 
-// === MooMoo プロバイダー登録 ===
-if (process.env.MOOMOO_API_KEY || process.env.MOOMOO_HOST) {
-  try {
-    const MoomooProvider = require('./providers/data/moomoo');
-    global.dataManager.register('moomoo', MoomooProvider, {
-      apiKey: process.env.MOOMOO_API_KEY,
-      host: process.env.MOOMOO_HOST || 'localhost',
-      port: parseInt(process.env.MOOMOO_PORT || '11111', 10),
-      timeout: 8000
-    });
-    console.log('✓ MooMoo provider registered');
-  } catch (e) {
-    console.warn('⚠ MooMoo provider registration failed:', e.message);
-  }
+// === MooMoo プロバイダー登録（常に登録） ===
+try {
+  const MoomooProvider = require('./providers/data/moomoo');
+  global.dataManager.register('moomoo', MoomooProvider, {
+    apiKey: process.env.MOOMOO_API_KEY,
+    host: process.env.MOOMOO_HOST || 'localhost',
+    port: parseInt(process.env.MOOMOO_PORT || '11111', 10),
+    timeout: 8000
+  });
+  console.log('✓ MooMoo provider registered');
+} catch (e) {
+  console.warn('⚠ MooMoo provider registration failed:', e.message);
 }
 
 // === Yahoo Finance プロバイダー登録（API key あれば） ===
