@@ -1,72 +1,63 @@
 'use strict';
 const express = require('express');
-const path = require('path');
+const DataManager = require('./core/data-manager');
+const AnalyticsEngine = require('./core/analytics-engine');
 
-// ポートは必ず環境変数から取得
-const PORT = parseInt(process.env.PORT) || 8080;
-console.log(`Starting MAGI Core on port ${PORT}`);
-
-// Express app作成
-const app = express();
+// ========== 1) 単一app ==========
+global.app = express();
 app.use(express.json({ limit: '1mb' }));
 
-// ヘルスチェック
-app.get('/healthz', (req, res) => {
-  res.status(200).send('ok');
-});
+// ========== 2) Data Manager初期化 ==========
+global.dataManager = new DataManager();
 
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy', port: PORT });
-});
-
-app.get('/status', (req, res) => {
-  res.json({
-    service: 'MAGI Core',
-    version: '2.0.0',
-    port: PORT,
-    time: new Date().toISOString(),
-    env_port: process.env.PORT,
-    actual_port: PORT,
-    secrets: {
-      OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
-      GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
-      ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
-      XAI_API_KEY: !!process.env.XAI_API_KEY
-    }
+// Yahoo Finance プロバイダー登録（ダミー - 既存コード流用可）
+const YahooProvider = require('./providers/data/base');
+if (process.env.YAHOO_API_KEY) {
+  global.dataManager.register('yahoo', YahooProvider, {
+    apiKey: process.env.YAHOO_API_KEY,
+    timeout: 5000
   });
-});
-
-// グローバルに設定（server.jsから参照可能にする）
-global.app = app;
-
-// server.jsを読み込み
-try {
-  require('./server.js');
-  console.log('✅ Server.js loaded successfully');
-} catch (err) {
-  console.error('❌ Error loading server.js:', err.message);
+} else {
+  console.warn('⚠ YAHOO_API_KEY not set - using mock provider');
+  global.dataManager.register('mock', YahooProvider, { timeout: 5000 });
 }
 
-// 静的ファイル
-app.use(express.static('public'));
+// ========== 3) Analytics Engine初期化 ==========
+global.analyticsEngine = new AnalyticsEngine(global.dataManager);
 
-// ルート
-app.get('/', (req, res) => {
-  res.send('MAGI Core Online - Port: ' + PORT);
+// ========== 4) 基盤ルート ==========
+app.get('/healthz', (_req, res) => res.status(200).send('ok'));
+
+app.get('/status', async (_req, res) => {
+  try {
+    const providers = await global.dataManager.status();
+    
+    res.json({
+      service: 'magi-app-extended',
+      version: '3.0.0',
+      time: new Date().toISOString(),
+      secrets: {
+        OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+        GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
+        XAI_API_KEY: !!process.env.XAI_API_KEY,
+        ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
+        YAHOO_API_KEY: !!process.env.YAHOO_API_KEY,
+        FINNHUB_API_KEY: !!process.env.FINNHUB_API_KEY
+      },
+      dataProviders: providers
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// サーバー起動（ポートを明示的に指定）
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 MAGI Core listening on port ${PORT}`);
-  console.log(`📍 Environment PORT: ${process.env.PORT}`);
-  console.log(`🌐 Open Web Preview on port ${PORT}`);
-});
+// ========== 5) アプリ本体読込 ==========
+try { require('./server.js'); } catch (e) { console.error('server.js load error:', e); }
 
-// グレースフルシャットダウン
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
+// ========== 6) listen ==========
+const port = Number(process.env.PORT) || 8080;
+app.listen(port, '0.0.0.0', () => {
+  console.log(`✓ bootstrap listening :${port}`);
+  console.log(`✓ Active data provider: ${global.dataManager.active}`);
+  console.log(`✓ Analytics engine ready`);
 });
