@@ -10,11 +10,27 @@ app.use(express.json({ limit: '1mb' }));
 // ========== 2) Data Manager初期化 ==========
 global.dataManager = new DataManager();
 
-// === Mock プロバイダー登録 ===
+// === Mock プロバイダー登録（テスト用） ===
 const MockProvider = require('./providers/data/mock');
 global.dataManager.register('mock', MockProvider, {
   timeout: 5000
 });
+
+// === MooMoo プロバイダー登録 ===
+if (process.env.MOOMOO_API_KEY || process.env.MOOMOO_HOST) {
+  try {
+    const MoomooProvider = require('./providers/data/moomoo');
+    global.dataManager.register('moomoo', MoomooProvider, {
+      apiKey: process.env.MOOMOO_API_KEY,
+      host: process.env.MOOMOO_HOST || 'localhost',
+      port: parseInt(process.env.MOOMOO_PORT || '11111', 10),
+      timeout: 8000
+    });
+    console.log('✓ MooMoo provider registered');
+  } catch (e) {
+    console.warn('⚠ MooMoo provider registration failed:', e.message);
+  }
+}
 
 // === Yahoo Finance プロバイダー登録（API key あれば） ===
 if (process.env.YAHOO_API_KEY) {
@@ -24,8 +40,9 @@ if (process.env.YAHOO_API_KEY) {
       apiKey: process.env.YAHOO_API_KEY,
       timeout: 5000
     });
+    console.log('✓ Yahoo provider registered');
   } catch (e) {
-    console.warn('⚠ Yahoo provider not available');
+    console.warn('⚠ Yahoo provider registration failed:', e.message);
   }
 }
 
@@ -37,8 +54,9 @@ if (process.env.FINNHUB_API_KEY) {
       apiKey: process.env.FINNHUB_API_KEY,
       timeout: 5000
     });
+    console.log('✓ Finnhub provider registered');
   } catch (e) {
-    console.warn('⚠ Finnhub provider not available');
+    console.warn('⚠ Finnhub provider registration failed:', e.message);
   }
 }
 
@@ -62,7 +80,9 @@ app.get('/status', async (_req, res) => {
         XAI_API_KEY: !!process.env.XAI_API_KEY,
         ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
         YAHOO_API_KEY: !!process.env.YAHOO_API_KEY,
-        FINNHUB_API_KEY: !!process.env.FINNHUB_API_KEY
+        FINNHUB_API_KEY: !!process.env.FINNHUB_API_KEY,
+        MOOMOO_API_KEY: !!process.env.MOOMOO_API_KEY,
+        MOOMOO_HOST: !!process.env.MOOMOO_HOST
       },
       dataProviders: providers
     });
