@@ -126,3 +126,25 @@ app.post('/api/stock/analyze/:ticker', require('./routes/stock'));
 app.post('/api/stock/ai-analysis/:ticker', require('./routes/stock-ai-analysis'));
 
 module.exports = app;
+
+// ========== 拡張機能ルート ==========
+
+// テクニカル分析
+app.post('/api/technical/:ticker', require('./routes/technical-analysis'));
+
+// イントラデイ分析
+app.get('/api/intraday/:ticker', require('./routes/intraday-analysis'));
+
+// オプション分析
+app.get('/api/options/:ticker', require('./routes/options-analysis'));
+
+// 企業情報
+app.get('/api/company/:ticker', require('./routes/company-profile'));
+
+// ポートフォリオ分析
+app.post('/api/portfolio/analyze', require('./routes/portfolio-analysis'));
+
+// セクター比較
+app.get('/api/sector/:sector', require('./routes/sector-analysis'));
+
+console.log('✓ Extended routes registered');

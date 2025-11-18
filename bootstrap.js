@@ -100,3 +100,41 @@ app.listen(port, '0.0.0.0', () => {
   console.log(`✓ Active data provider: ${global.dataManager.active}`);
   console.log(`✓ Analytics engine ready`);
 });
+
+// === MooMoo Extended プロバイダー登録（フル装備版） ===
+try {
+  const MoomooExtendedProvider = require('./providers/data/moomoo-extended');
+  global.dataManager.register('moomoo-extended', MoomooExtendedProvider, {
+    host: process.env.MOOMOO_HOST,
+    port: process.env.MOOMOO_PORT,
+    apiKey: process.env.MOOMOO_API_KEY
+  });
+  console.log('✓ MooMoo Extended provider registered');
+} catch (e) {
+  console.warn('⚠ MooMoo Extended provider registration failed:', e.message);
+}
+
+
+// === MooMoo Extended プロバイダー登録（フル装備版） ===
+try {
+  const MoomooExtendedProvider = require('./providers/data/moomoo-extended');
+  global.dataManager.register('moomoo-extended', MoomooExtendedProvider, {
+    host: process.env.MOOMOO_HOST,
+    port: process.env.MOOMOO_PORT,
+    apiKey: process.env.MOOMOO_API_KEY
+  });
+  console.log('✓ MooMoo Extended provider registered');
+} catch (e) {
+  console.warn('⚠ MooMoo Extended provider registration failed:', e.message);
+}
+
+
+// === AnalyticsEngineExtended 初期化 ===
+try {
+  const AnalyticsEngineExtended = require('./core/analytics-engine-extended');
+  global.analyticsEngineExtended = new AnalyticsEngineExtended(global.dataManager);
+  console.log('✓ AnalyticsEngineExtended initialized');
+} catch (e) {
+  console.error('⚠ AnalyticsEngineExtended failed:', e.message);
+}
+
