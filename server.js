@@ -8,9 +8,29 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = global.app || express();
 
+// =================== 追加：静的ファイル配信 ===================
+app.use(express.static('public'));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+// ===========================================================
+
 // Multer 設定（メモリに一時保存）
 const upload = multer({ 
   storage: multer.memoryStorage(), 
+  limits: { fileSize: 50 * 1024 * 1024 }
+});
+
+// Cloud Storage クライアント
+const storage = new Storage();
+const bucket = storage.bucket(process.env.GCS_BUCKET);
+
+// ドキュメント情報を保存するメモリDB
+const documentsDB = {};
+
+console.log('[SERVER] Document analysis module initialized');
+console.log('[CONFIG] GCS_BUCKET:', process.env.GCS_BUCKET || 'NOT SET');
   limits: { fileSize: 50 * 1024 * 1024 }
 });
 
