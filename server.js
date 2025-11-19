@@ -454,3 +454,40 @@ app.post('/api/consensus', async (req, res) => {
   }
 });
 
+
+// =====================================
+// POST /api/stock/fetch
+// =====================================
+app.post('/api/stock/fetch', async (req, res) => {
+  try {
+    const { symbol } = req.body;
+    if (!symbol) {
+      return res.status(400).json({ error: 'symbol required' });
+    }
+
+    console.log('[STOCK] Fetching data for:', symbol);
+
+    // magi-ac から取得（模式実装）
+    // 実際には: const response = await fetch(`${MAGI_AC_URL}/api/fetch`, ...);
+    const mockData = {
+      symbol: symbol,
+      financialData: {
+        companyName: `${symbol} Inc.`,
+        currentPrice: 150.25,
+        market: 'NASDAQ',
+        marketCap: 2.5e12,
+        per: 28.5,
+        eps: 5.27,
+        dividendYield: 0.012
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(mockData);
+
+  } catch (error) {
+    console.error('[STOCK] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
