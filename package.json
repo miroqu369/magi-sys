@@ -1,30 +1,19 @@
 {
   "name": "magi-core",
   "version": "2.0.0",
-  "description": "MAGI Consensus LLM System with GPT Integration Modes",
+  "description": "MAGI System - Multi-AI Consensus Engine",
   "main": "bootstrap.js",
   "scripts": {
-    "start": "node bootstrap.js",
-    "test": "node tests/retry.test.js && node tests/base-provider.test.js",
-    "lint": "eslint ."
+    "start": "node bootstrap.js"
   },
   "dependencies": {
-    "@google-cloud/bigquery": "^8.1.1",
-    "@google-cloud/secret-manager": "^5.0.0",
+    "@google-cloud/storage": "7.0.0",
     "express": "^4.21.2",
-    "express-session": "^1.18.2",
-    "googleapis": "^166.0.0"
+    "multer": "1.4.5-lts.1",
+    "pdf-parse": "1.1.1",
+    "uuid": "9.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/miroqu369/magi-core.git"
-  },
-  "author": "miroqu369",
-  "license": "MIT",
-  "devDependencies": {
-    "eslint": "^9.39.1"
   }
 }
