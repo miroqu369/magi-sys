@@ -1,3 +1,4 @@
+const authRouter = require('./routes/auth');
 'use strict';
 const app = global.app || require('express')();
 
@@ -148,3 +149,15 @@ app.post('/api/portfolio/analyze', require('./routes/portfolio-analysis'));
 app.get('/api/sector/:sector', require('./routes/sector-analysis'));
 
 console.log('✓ Extended routes registered');
+
+// OAuth Session
+const session = require('express-session');
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'devsecret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: 'auto' }
+}));
+
+// OAuth Routes
+app.use('/auth', authRouter);
