@@ -70,7 +70,6 @@ app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
         console.log(`[GCS] File saved: gs://${process.env.GCS_BUCKET}/${gcsPath}`);
       } catch (gcsError) {
         console.warn('[GCS] Warning:', gcsError.message);
-        // GCS失敗してもメモリDBには保存
       }
     }
 
@@ -79,7 +78,7 @@ app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
       id: docId,
       name: name,
       gcsPath: gcsPath,
-      extractedText: extractedText.substring(0, 50000), // 最初の50,000文字
+      extractedText: extractedText.substring(0, 50000),
       uploadedAt: new Date().toISOString(),
       fileType: fileExt,
       textLength: extractedText.length
@@ -114,11 +113,12 @@ app.get('/api/documents/list', (req, res) => {
 });
 
 // =====================================
-// POST /api/documents/analyze
+// POST /api/documents/analyze (拡張版)
+// ticker パラメータで magi-ac から財務データ取得
 // =====================================
 app.post('/api/documents/analyze', async (req, res) => {
   try {
-    const { documentId, customPrompt, mode = 'integration' } = req.body;
+    const { documentId, customPrompt, mode = 'integration', ticker } = req.body;
 
     const doc = documentsDB[documentId];
     if (!doc) {
@@ -126,8 +126,36 @@ app.post('/api/documents/analyze', async (req, res) => {
     }
 
     console.log(`[ANALYZE] Starting analysis: ${documentId} (${doc.name})`);
+    if (ticker) {
+      console.log(`[ANALYZE] Ticker specified: ${ticker}`);
+    }
 
-    // プロンプト構築
+    // ① ticker が指定されていたら、magi-ac から財務データを取得
+    let financialData = null;
+    if (ticker) {
+      try {
+        const magiAcURL = process.env.MAGI_AC_URL || 'https://magi-ac-398890937507.asia-northeast1.run.app';
+        console.log(`[ANALYZE] Fetching financial data from: ${magiAcURL}`);
+        
+        const fetchResponse = await fetch(`${magiAcURL}/api/fetch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol: ticker })
+        });
+        
+        if (fetchResponse.ok) {
+          financialData = await fetchResponse.json();
+          console.log(`[ANALYZE] Financial data retrieved for ${ticker}`);
+        } else {
+          console.warn(`[ANALYZE] Failed to fetch data: ${fetchResponse.status}`);
+        }
+      } catch (error) {
+        console.warn(`[ANALYZE] Error fetching financial data:`, error.message);
+        // エラーでも続行
+      }
+    }
+
+    // ② プロンプト構築
     const defaultPrompt = `
 【決算報告書の自動分析】
 
@@ -151,9 +179,38 @@ ${doc.extractedText}
 - 箇条書きで簡潔に
     `;
 
-    const prompt = customPrompt || defaultPrompt;
+    let prompt = customPrompt || defaultPrompt;
 
-    // 既存の /api/consensus エンドポイントに委譲
+    // ③ 財務データがあればプロンプトに追加
+    if (financialData && financialData.financialData) {
+      const fd = financialData.financialData;
+      prompt += `
+
+【最新の財務指標 (${ticker}) - ${financialData.timestamp}】
+- 現在株価: $${fd.currentPrice}
+- PER（株価収益率）: ${fd.per}
+- EPS（1株利益）: $${fd.eps}
+- 配当利回り: ${(fd.dividendYield * 100).toFixed(2)}%
+- 時価総額: $${(fd.marketCap / 1e9).toFixed(2)}B
+- 52週高値: $${fd.fiftyTwoWeekHigh}
+- 52週安値: $${fd.fiftyTwoWeekLow}
+
+【統合分析の追加観点】
+1. 決算内容と最新株価の乖離分析
+   - PER の妥当性評価（業界平均との比較）
+   - 現在の株価が割安/割高か
+   
+2. 配当政策の評価
+   - 配当利回りの妥当性
+   - 決算内容と配当政策の整合性
+   
+3. 市場評価の妥当性
+   - 決算の好悪内容と株価の乖離
+   - 投資機会の有無
+    `;
+    }
+
+    // ④ magi-core の /api/consensus に委譲
     console.log(`[ANALYZE] Calling consensus endpoint with mode: ${mode}`);
     
     const consensusURL = `${process.env.API_BASE_URL || 'http://localhost:8080'}/api/consensus`;
@@ -172,11 +229,13 @@ ${doc.extractedText}
 
     const result = await consensusResponse.json();
     
-    // メタ情報を追加
+    // ⑤ メタ情報を追加
     result.documentName = doc.name;
     result.documentId = documentId;
-    result.analysisType = 'financial_report';
+    result.analysisType = 'financial_report_with_market_data';
     result.analysisTime = new Date().toISOString();
+    result.ticker = ticker;
+    result.financialData = financialData;
 
     console.log(`[ANALYZE] ✅ Complete: ${documentId}`);
     res.json(result);

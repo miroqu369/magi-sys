@@ -7,61 +7,190 @@
   <style>
     body { background: #0f0f1e; color: #fff; font-family: sans-serif; margin: 0; padding: 20px; }
     .container { max-width: 1200px; margin: 0 auto; }
-    h1 { color: #16c784; }
+    h1 { color: #16c784; margin-bottom: 30px; }
+    h2 { color: #16c784; border-bottom: 2px solid #16c784; padding-bottom: 10px; }
     .panel { background: #1a1a2e; border: 1px solid #16c784; padding: 20px; margin: 20px 0; border-radius: 8px; }
-    input, textarea { width: 100%; padding: 10px; margin: 10px 0; background: #0f0f1e; color: #fff; border: 1px solid #16c784; border-radius: 4px; }
-    button { background: #16c784; color: #000; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    input, textarea, select { width: 100%; padding: 10px; margin: 10px 0; background: #0f0f1e; color: #fff; border: 1px solid #16c784; border-radius: 4px; font-size: 14px; }
+    button { background: #16c784; color: #000; border: none; padding: 12px 24px; margin: 5px 5px 5px 0; border-radius: 4px; cursor: pointer; font-weight: bold; }
     button:hover { background: #11a366; }
+    .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
+    .result { background: #0f0f1e; padding: 15px; margin: 10px 0; border-left: 4px solid #16c784; border-radius: 4px; }
+    .mode-selector { background: #0f0f1e; padding: 10px; border: 1px solid #16c784; border-radius: 4px; margin: 10px 0; }
+    .document-item { background: #0f0f1e; padding: 12px; margin: 8px 0; border-left: 3px solid #16c784; border-radius: 4px; }
+    label { display: block; margin: 10px 0 5px 0; font-weight: bold; }
+    .settings-btn { background: #444; color: #fff; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 18px; border: none; }
+    .settings-btn:hover { background: #666; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; }
+    .modal-content { background: #1a1a2e; border: 2px solid #16c784; border-radius: 8px; padding: 30px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 600px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .close-btn { background: #ff6b6b; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .close-btn:hover { background: #ff5252; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🔮 MAGI System v2.0 - 決算報告書解析</h1>
+    <div class="header">
+      <h1>MAGI System v2.0 - 決算報告書解析</h1>
+      <button class="settings-btn" onclick="openSettings()">⚙️</button>
+    </div>
     
     <div class="panel">
-      <h2>📄 ドキュメント管理</h2>
-      <input type="file" id="fileInput" accept=".pdf,.txt" placeholder="ファイルを選択">
-      <input type="text" id="docName" placeholder="ドキュメント名">
-      <button onclick="uploadFile()">📤 アップロード</button>
+      <h2>ドキュメント管理</h2>
+      <label>ファイル選択</label>
+      <input type="file" id="fileInput" accept=".pdf,.txt">
+      
+      <label>ドキュメント名</label>
+      <input type="text" id="docName" placeholder="例: 2024年度決算報告書">
+      
+      <button onclick="uploadFile()">アップロード</button>
       <div id="uploadStatus"></div>
-      <button onclick="listDocuments()">📋 ドキュメント一覧</button>
+      
+      <button onclick="listDocuments()">ドキュメント一覧を更新</button>
       <div id="documentList"></div>
     </div>
 
     <div class="panel">
-      <h2>🧠 AI 解析</h2>
+      <h2>AI解析エンジン</h2>
+      <label>解析対象ドキュメント</label>
       <select id="selectedDoc">
         <option>---選択してください---</option>
       </select>
-      <textarea id="customPrompt" placeholder="カスタムプロンプト（オプション）"></textarea>
-      <button onclick="analyzeDocument()">🔍 自動解析</button>
+      
+      <div class="button-group">
+        <button onclick="analyzeDocument()">詳細解析（MAGI統合）</button>
+        <button onclick="summarizeDocument('magi')">要約生成（高品質）</button>
+        <button onclick="summarizeDocument('grok')">要約生成（高速）</button>
+      </div>
+
+      <div class="mode-selector">
+        <label>要約の長さ</label>
+        <select id="summaryLength">
+          <option value="short">短い（100-150文字）</option>
+          <option value="medium" selected>中程度（300-500文字）</option>
+          <option value="long">長い（800-1200文字）</option>
+        </select>
+      </div>
+
+      <label>カスタムプロンプト（詳細解析時のみ）</label>
+      <textarea id="customPrompt" placeholder="例: 営業利益の推移を分析してください"></textarea>
+      
       <div id="analysisStatus"></div>
       <div id="result"></div>
     </div>
 
     <div class="panel">
-      <h2>🔄 ドキュメント比較</h2>
-      <select id="doc1"><option>---ドキュメント1を選択---</option></select>
-      <select id="doc2"><option>---ドキュメント2を選択---</option></select>
-      <button onclick="compareDocuments()">📊 比較分析</button>
+      <h2>ドキュメント比較</h2>
+      <label>比較ドキュメント1</label>
+      <select id="doc1">
+        <option>---選択してください---</option>
+      </select>
+      
+      <label>比較ドキュメント2</label>
+      <select id="doc2">
+        <option>---選択してください---</option>
+      </select>
+      
+      <button onclick="compareDocuments()">比較分析実行</button>
       <div id="compareResult"></div>
+    </div>
+  </div>
+
+  <!-- 設定モーダル -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>⚙️ 設定</h2>
+        <button class="close-btn" onclick="closeSettings()">閉じる</button>
+      </div>
+      
+      <label>デフォルト要約長</label>
+      <select id="defaultSummaryLength">
+        <option value="short">短い（100-150文字）</option>
+        <option value="medium" selected>中程度（300-500文字）</option>
+        <option value="long">長い（800-1200文字）</option>
+      </select>
+      
+      <label>デフォルト解析モード</label>
+      <select id="defaultMode">
+        <option value="integration" selected>MAGI統合（高品質）</option>
+        <option value="grok">Grok（高速）</option>
+      </select>
+      
+      <label>言語</label>
+      <select id="language">
+        <option value="ja" selected>日本語</option>
+        <option value="en">English</option>
+      </select>
+      
+      <label>API エンドポイント</label>
+      <input type="text" id="apiEndpoint" placeholder="http://localhost:8080">
+      
+      <div style="margin-top: 20px;">
+        <button onclick="saveSettings()">設定を保存</button>
+        <button onclick="closeSettings()" style="background: #666;">キャンセル</button>
+      </div>
+      
+      <div id="settingsStatus"></div>
     </div>
   </div>
 
   <script>
     const API_URL = window.location.origin;
 
+    // 設定管理
+    function openSettings() {
+      document.getElementById('settingsModal').style.display = 'block';
+      loadSettings();
+    }
+
+    function closeSettings() {
+      document.getElementById('settingsModal').style.display = 'none';
+    }
+
+    function loadSettings() {
+      const settings = JSON.parse(localStorage.getItem('magiSettings') || '{}');
+      document.getElementById('defaultSummaryLength').value = settings.summaryLength || 'medium';
+      document.getElementById('defaultMode').value = settings.mode || 'integration';
+      document.getElementById('language').value = settings.language || 'ja';
+      document.getElementById('apiEndpoint').value = settings.apiEndpoint || API_URL;
+    }
+
+    function saveSettings() {
+      const settings = {
+        summaryLength: document.getElementById('defaultSummaryLength').value,
+        mode: document.getElementById('defaultMode').value,
+        language: document.getElementById('language').value,
+        apiEndpoint: document.getElementById('apiEndpoint').value
+      };
+      localStorage.setItem('magiSettings', JSON.stringify(settings));
+      document.getElementById('settingsStatus').innerHTML = '<div class="result" style="color: #16c784;">成功: 設定が保存されました</div>';
+      setTimeout(() => closeSettings(), 1500);
+    }
+
+    function getSettings() {
+      return JSON.parse(localStorage.getItem('magiSettings') || '{}');
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById('settingsModal');
+      if (event.target == modal) {
+        closeSettings();
+      }
+    }
+
+    // その他の機能
     async function uploadFile() {
       const fileInput = document.getElementById('fileInput');
       const docName = document.getElementById('docName').value;
       const uploadStatus = document.getElementById('uploadStatus');
       
       if (!fileInput.files[0] || !docName) {
-        uploadStatus.innerHTML = '<p style="color: #ff6b6b;">❌ ファイルと名前を入力してください</p>';
+        uploadStatus.innerHTML = '<div class="result" style="color: #ff6b6b;">エラー: ファイルと名前を入力してください</div>';
         return;
       }
 
-      uploadStatus.innerHTML = '<p style="color: #16c784;">⏳ アップロード中...</p>';
+      uploadStatus.innerHTML = '<div class="result" style="color: #16c784;">処理中: アップロード中です...</div>';
       
       const formData = new FormData();
       formData.append('file', fileInput.files[0]);
@@ -75,15 +204,15 @@
         
         const result = await response.json();
         if (response.ok) {
-          uploadStatus.innerHTML = `<p style="color: #16c784;">✅ アップロード成功! ID: ${result.docId.substring(0, 8)}...</p>`;
+          uploadStatus.innerHTML = `<div class="result" style="color: #16c784;">成功: アップロード完了 (ID: ${result.docId.substring(0, 8)}...)</div>`;
           fileInput.value = '';
           document.getElementById('docName').value = '';
           listDocuments();
         } else {
-          uploadStatus.innerHTML = `<p style="color: #ff6b6b;">❌ エラー: ${result.error}</p>`;
+          uploadStatus.innerHTML = `<div class="result" style="color: #ff6b6b;">エラー: ${result.error}</div>`;
         }
       } catch (error) {
-        uploadStatus.innerHTML = `<p style="color: #ff6b6b;">❌ ${error.message}</p>`;
+        uploadStatus.innerHTML = `<div class="result" style="color: #ff6b6b;">エラー: ${error.message}</div>`;
       }
     }
 
@@ -99,18 +228,21 @@
         
         let html = '';
         select1.innerHTML = '<option>---選択してください---</option>';
-        select2.innerHTML = '<option>---ドキュメント1を選択---</option>';
-        select3.innerHTML = '<option>---ドキュメント2を選択---</option>';
+        select2.innerHTML = '<option>---選択してください---</option>';
+        select3.innerHTML = '<option>---選択してください---</option>';
         
         documents.forEach(doc => {
-          html += `<div style="background: #0f0f1e; padding: 10px; margin: 5px 0; border-left: 3px solid #16c784;">📄 ${doc.name}</div>`;
+          html += `<div class="document-item">
+            <strong>${doc.name}</strong><br>
+            <small>ID: ${doc.id.substring(0, 8)}... | サイズ: ${doc.textLength} 文字</small>
+          </div>`;
           const option = `<option value="${doc.id}">${doc.name}</option>`;
           select1.innerHTML += option;
           select2.innerHTML += option;
           select3.innerHTML += option;
         });
         
-        listDiv.innerHTML = html || '<p style="color: #888;">ドキュメントがありません</p>';
+        listDiv.innerHTML = html || '<p style="color: #888;">登録されたドキュメントはありません</p>';
       } catch (error) {
         console.error(error);
       }
@@ -123,11 +255,11 @@
       const resultDiv = document.getElementById('result');
       
       if (!docId) {
-        resultDiv.innerHTML = '<p style="color: #ff6b6b;">❌ ドキュメントを選択してください</p>';
+        resultDiv.innerHTML = '<div class="result" style="color: #ff6b6b;">エラー: ドキュメントを選択してください</div>';
         return;
       }
 
-      analysisStatus.innerHTML = '<p style="color: #16c784;">⏳ 分析中...（15～25秒）</p>';
+      analysisStatus.innerHTML = '<div class="result" style="color: #16c784;">処理中: 詳細解析実行中です（15～25秒かかります）</div>';
       resultDiv.innerHTML = '';
 
       try {
@@ -142,13 +274,55 @@
         });
         
         const result = await response.json();
-        analysisStatus.innerHTML = '<p style="color: #16c784;">✅ 分析完了</p>';
+        analysisStatus.innerHTML = '<div class="result" style="color: #16c784;">成功: 詳細解析が完了しました</div>';
         
-        let html = `<div style="background: #0f0f1e; padding: 15px; border-left: 4px solid #16c784; margin: 10px 0;"><h3>最終結果</h3><p>${result.final}</p></div>`;
+        let html = `<div class="result"><h3>最終分析結果</h3><p>${result.final}</p></div>`;
         resultDiv.innerHTML = html;
       } catch (error) {
-        analysisStatus.innerHTML = '<p style="color: #ff6b6b;">❌ エラー</p>';
-        resultDiv.innerHTML = `<p style="color: #ff6b6b;">${error.message}</p>`;
+        analysisStatus.innerHTML = '<div class="result" style="color: #ff6b6b;">エラー: 解析処理に失敗しました</div>';
+        resultDiv.innerHTML = `<div class="result" style="color: #ff6b6b;">詳細: ${error.message}</div>`;
+      }
+    }
+
+    async function summarizeDocument(mode) {
+      const docId = document.getElementById('selectedDoc').value;
+      const summaryLength = document.getElementById('summaryLength').value;
+      const analysisStatus = document.getElementById('analysisStatus');
+      const resultDiv = document.getElementById('result');
+      
+      if (!docId) {
+        resultDiv.innerHTML = '<div class="result" style="color: #ff6b6b;">エラー: ドキュメントを選択してください</div>';
+        return;
+      }
+
+      const modeLabel = mode === 'grok' ? '高速' : '高品質';
+      analysisStatus.innerHTML = `<div class="result" style="color: #16c784;">処理中: 要約生成中です（${modeLabel}モード、10～25秒かかります）</div>`;
+      resultDiv.innerHTML = '';
+
+      try {
+        const response = await fetch(`${API_URL}/api/documents/summarize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            documentId: docId,
+            language: 'ja',
+            length: summaryLength,
+            mode: mode
+          })
+        });
+        
+        const result = await response.json();
+        analysisStatus.innerHTML = `<div class="result" style="color: #16c784;">成功: 要約生成が完了しました（${modeLabel}）</div>`;
+        
+        let html = `<div class="result">
+          <h3>決算報告書要約（${modeLabel}）</h3>
+          <p>${result.final}</p>
+          <small>長さ: ${summaryLength} | モデル: ${result.model} | 生成時刻: ${result.summaryTime}</small>
+        </div>`;
+        resultDiv.innerHTML = html;
+      } catch (error) {
+        analysisStatus.innerHTML = '<div class="result" style="color: #ff6b6b;">エラー: 要約生成に失敗しました</div>';
+        resultDiv.innerHTML = `<div class="result" style="color: #ff6b6b;">詳細: ${error.message}</div>`;
       }
     }
 
@@ -158,11 +332,11 @@
       const compareResult = document.getElementById('compareResult');
       
       if (!doc1 || !doc2) {
-        compareResult.innerHTML = '<p style="color: #ff6b6b;">❌ 2つのドキュメントを選択してください</p>';
+        compareResult.innerHTML = '<div class="result" style="color: #ff6b6b;">エラー: 2つのドキュメントを選択してください</div>';
         return;
       }
 
-      compareResult.innerHTML = '<p style="color: #16c784;">⏳ 比較分析中...</p>';
+      compareResult.innerHTML = '<div class="result" style="color: #16c784;">処理中: 比較分析実行中です...</div>';
 
       try {
         const response = await fetch(`${API_URL}/api/documents/compare`, {
@@ -172,9 +346,9 @@
         });
         
         const result = await response.json();
-        compareResult.innerHTML = `<div style="background: #0f0f1e; padding: 15px; border-left: 4px solid #16c784;"><p>${result.final}</p></div>`;
+        compareResult.innerHTML = `<div class="result"><h3>比較分析結果</h3><p>${result.final}</p></div>`;
       } catch (error) {
-        compareResult.innerHTML = `<p style="color: #ff6b6b;">${error.message}</p>`;
+        compareResult.innerHTML = `<div class="result" style="color: #ff6b6b;">エラー: ${error.message}</div>`;
       }
     }
 
