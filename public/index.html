@@ -3,356 +3,410 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MAGI System v2.0</title>
+  <title>MAGI System v2.2</title>
   <style>
-    body { background: #0f0f1e; color: #fff; font-family: sans-serif; margin: 0; padding: 20px; }
-    .container { max-width: 1200px; margin: 0 auto; }
-    h1 { color: #16c784; margin-bottom: 30px; }
-    h2 { color: #16c784; border-bottom: 2px solid #16c784; padding-bottom: 10px; }
-    .panel { background: #1a1a2e; border: 1px solid #16c784; padding: 20px; margin: 20px 0; border-radius: 8px; }
-    input, textarea, select { width: 100%; padding: 10px; margin: 10px 0; background: #0f0f1e; color: #fff; border: 1px solid #16c784; border-radius: 4px; font-size: 14px; }
-    button { background: #16c784; color: #000; border: none; padding: 12px 24px; margin: 5px 5px 5px 0; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    button:hover { background: #11a366; }
-    .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
-    .result { background: #0f0f1e; padding: 15px; margin: 10px 0; border-left: 4px solid #16c784; border-radius: 4px; }
-    .mode-selector { background: #0f0f1e; padding: 10px; border: 1px solid #16c784; border-radius: 4px; margin: 10px 0; }
-    .document-item { background: #0f0f1e; padding: 12px; margin: 8px 0; border-left: 3px solid #16c784; border-radius: 4px; }
-    label { display: block; margin: 10px 0 5px 0; font-weight: bold; }
-    .settings-btn { background: #444; color: #fff; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 18px; border: none; }
-    .settings-btn:hover { background: #666; }
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; }
-    .modal-content { background: #1a1a2e; border: 2px solid #16c784; border-radius: 8px; padding: 30px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 600px; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .close-btn { background: #ff6b6b; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    .close-btn:hover { background: #ff5252; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5; color: #333; line-height: 1.6; }
+    
+    .login-container { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+    .login-box { background-color: white; padding: 3rem; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 100%; max-width: 400px; }
+    .login-title { font-size: 1.8rem; font-weight: 600; margin-bottom: 0.5rem; text-align: center; }
+    .login-form { display: flex; flex-direction: column; gap: 1.2rem; }
+    .form-label { font-weight: 500; margin-bottom: 0.5rem; color: #444; font-size: 0.9rem; }
+    .form-input { width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95rem; font-family: inherit; }
+    .form-input:focus { outline: none; border-color: #667eea; background-color: #f9f9f9; }
+    .login-btn { width: 100%; padding: 0.8rem; background-color: #667eea; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
+    .login-btn:hover { background-color: #5568d3; }
+    .login-error { background-color: #ffebee; color: #c62828; padding: 0.75rem; border-radius: 4px; font-size: 0.85rem; display: none; margin-bottom: 0.5rem; border-left: 3px solid #c62828; }
+    .login-error.show { display: block; }
+    .login-demo { background-color: #f0f4ff; padding: 1rem; border-radius: 4px; margin-top: 1.5rem; font-size: 0.8rem; color: #667eea; border-left: 3px solid #667eea; }
+    
+    .main-app { display: none; }
+    .main-app.logged-in { display: block; }
+    
+    .header { background-color: #fff; border-bottom: 1px solid #e0e0e0; padding: 1rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .header-left { display: flex; align-items: center; gap: 1rem; }
+    .header-title { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; }
+    .menu-toggle { background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0.5rem; color: #666; }
+    .menu-toggle:hover { color: #333; }
+    .logout-btn { padding: 0.4rem 0.8rem; background-color: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 0.85rem; color: #666; }
+    .logout-btn:hover { background-color: #ffebee; border-color: #c62828; color: #c62828; }
+    
+    .sidebar { position: fixed; left: 0; top: 0; width: 250px; height: 100vh; background-color: #f9f9f9; border-right: 1px solid #e0e0e0; transform: translateX(-250px); transition: transform 0.3s ease; z-index: 1000; overflow-y: auto; padding-top: 3rem; }
+    .sidebar.active { transform: translateX(0); }
+    .sidebar-menu { list-style: none; }
+    .sidebar-menu button { display: block; width: 100%; padding: 1rem; background: none; border: none; text-align: left; cursor: pointer; font-size: 0.95rem; color: #555; transition: all 0.2s; }
+    .sidebar-menu button:hover { background-color: #efefef; color: #333; padding-left: 1.5rem; }
+    .sidebar-menu button.active { background-color: #e8e8e8; color: #000; font-weight: 600; padding-left: 1.5rem; }
+    
+    .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.3); display: none; z-index: 999; }
+    .overlay.active { display: block; }
+    
+    .main-content { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+    .container { display: none; }
+    .container.active { display: block; }
+    
+    .form-container { background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+    .form-group { margin-bottom: 1.5rem; }
+    .form-input, .form-select, textarea { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 0.95rem; }
+    textarea { resize: vertical; min-height: 120px; }
+    .form-options { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    .btn-submit { width: 100%; padding: 0.8rem; background-color: #333; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; }
+    .btn-submit:hover { background-color: #555; }
+    .btn-submit:disabled { background-color: #ccc; }
+    
+    .result-container { background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+    .result-header { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px solid #e0e0e0; }
+    .final-answer { background-color: #f9f9f9; padding: 1.5rem; border-radius: 4px; margin-bottom: 2rem; border-left: 4px solid #333; }
+    .final-label { font-size: 0.85rem; color: #666; margin-bottom: 0.5rem; font-weight: 600; text-transform: uppercase; }
+    .final-text { color: #333; line-height: 1.8; }
+    
+    .metrics { margin-top: 2rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0e0; }
+    .metric-item { text-align: center; }
+    .metric-value { font-size: 1.2rem; font-weight: 600; color: #333; }
+    .metric-label { font-size: 0.75rem; color: #999; margin-top: 0.3rem; text-transform: uppercase; }
+    
+    .status-message { padding: 1rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; }
+    .status-loading { background-color: #e3f2fd; color: #1565c0; border-left: 4px solid #1565c0; }
+    .status-error { background-color: #ffebee; color: #c62828; border-left: 4px solid #c62828; }
+    
+    .pattern-selection { margin-bottom: 2rem; padding: 1.5rem; background-color: #f9f9f9; border-radius: 4px; border-left: 4px solid #333; }
+    .pattern-options { display: flex; flex-direction: column; gap: 1rem; }
+    .pattern-option { display: flex; align-items: flex-start; gap: 0.75rem; }
+    .pattern-label { flex: 1; cursor: pointer; }
+    .pattern-name { font-weight: 600; color: #333; margin-bottom: 0.3rem; }
+    .pattern-desc { font-size: 0.85rem; color: #666; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>MAGI System v2.0 - 決算報告書解析</h1>
-      <button class="settings-btn" onclick="openSettings()">⚙️</button>
-    </div>
-    
-    <div class="panel">
-      <h2>ドキュメント管理</h2>
-      <label>ファイル選択</label>
-      <input type="file" id="fileInput" accept=".pdf,.txt">
+  <div class="login-container" id="loginContainer">
+    <div class="login-box">
+      <div class="login-title">MAGI System</div>
+      <div style="text-align: center; font-size: 0.9rem; color: #999; margin-bottom: 2rem;">v2.2 - 3AI合議 + 株価調査</div>
       
-      <label>ドキュメント名</label>
-      <input type="text" id="docName" placeholder="例: 2024年度決算報告書">
-      
-      <button onclick="uploadFile()">アップロード</button>
-      <div id="uploadStatus"></div>
-      
-      <button onclick="listDocuments()">ドキュメント一覧を更新</button>
-      <div id="documentList"></div>
-    </div>
+      <div class="login-error" id="loginError"></div>
 
-    <div class="panel">
-      <h2>AI解析エンジン</h2>
-      <label>解析対象ドキュメント</label>
-      <select id="selectedDoc">
-        <option>---選択してください---</option>
-      </select>
-      
-      <div class="button-group">
-        <button onclick="analyzeDocument()">詳細解析（MAGI統合）</button>
-        <button onclick="summarizeDocument('magi')">要約生成（高品質）</button>
-        <button onclick="summarizeDocument('grok')">要約生成（高速）</button>
+      <form class="login-form" id="loginForm">
+        <div class="form-group">
+          <label class="form-label">ユーザーID</label>
+          <input type="text" id="userId" class="form-input" placeholder="IDを入力" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">パスワード</label>
+          <input type="password" id="userPassword" class="form-input" placeholder="パスワードを入力" required>
+        </div>
+
+        <button type="submit" class="login-btn">ログイン</button>
+      </form>
+
+      <div class="login-demo">
+        <div style="font-weight: 600; margin-bottom: 0.3rem;">デモアカウント</div>
+        ID: admin<br>PASS: magi2024
       </div>
-
-      <div class="mode-selector">
-        <label>要約の長さ</label>
-        <select id="summaryLength">
-          <option value="short">短い（100-150文字）</option>
-          <option value="medium" selected>中程度（300-500文字）</option>
-          <option value="long">長い（800-1200文字）</option>
-        </select>
-      </div>
-
-      <label>カスタムプロンプト（詳細解析時のみ）</label>
-      <textarea id="customPrompt" placeholder="例: 営業利益の推移を分析してください"></textarea>
-      
-      <div id="analysisStatus"></div>
-      <div id="result"></div>
-    </div>
-
-    <div class="panel">
-      <h2>ドキュメント比較</h2>
-      <label>比較ドキュメント1</label>
-      <select id="doc1">
-        <option>---選択してください---</option>
-      </select>
-      
-      <label>比較ドキュメント2</label>
-      <select id="doc2">
-        <option>---選択してください---</option>
-      </select>
-      
-      <button onclick="compareDocuments()">比較分析実行</button>
-      <div id="compareResult"></div>
     </div>
   </div>
 
-  <!-- 設定モーダル -->
-  <div id="settingsModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>⚙️ 設定</h2>
-        <button class="close-btn" onclick="closeSettings()">閉じる</button>
+  <div class="main-app" id="mainApp">
+    <div class="header">
+      <div class="header-left">
+        <button class="menu-toggle" id="menuToggle">≡</button>
+        <div class="header-title">MAGI System</div>
       </div>
-      
-      <label>デフォルト要約長</label>
-      <select id="defaultSummaryLength">
-        <option value="short">短い（100-150文字）</option>
-        <option value="medium" selected>中程度（300-500文字）</option>
-        <option value="long">長い（800-1200文字）</option>
-      </select>
-      
-      <label>デフォルト解析モード</label>
-      <select id="defaultMode">
-        <option value="integration" selected>MAGI統合（高品質）</option>
-        <option value="grok">Grok（高速）</option>
-      </select>
-      
-      <label>言語</label>
-      <select id="language">
-        <option value="ja" selected>日本語</option>
-        <option value="en">English</option>
-      </select>
-      
-      <label>API エンドポイント</label>
-      <input type="text" id="apiEndpoint" placeholder="http://localhost:8080">
-      
-      <div style="margin-top: 20px;">
-        <button onclick="saveSettings()">設定を保存</button>
-        <button onclick="closeSettings()" style="background: #666;">キャンセル</button>
+      <button class="logout-btn" id="logoutBtn">ログアウト</button>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+    <aside class="sidebar" id="sidebar">
+      <ul class="sidebar-menu">
+        <li><button class="sidebar-btn active" data-tab="question">質問を送信</button></li>
+        <li><button class="sidebar-btn" data-tab="stock">株価調査</button></li>
+        <li><button class="sidebar-btn" data-tab="history">履歴</button></li>
+        <li><button class="sidebar-btn" data-tab="settings">⚙ 設定</button></li>
+      </ul>
+    </aside>
+
+    <div class="main-content">
+      <div id="question" class="container active">
+        <div class="form-container">
+          <div class="form-group">
+            <label class="form-label">質問内容</label>
+            <textarea id="prompt" placeholder="ここに質問を入力してください..."></textarea>
+          </div>
+
+          <div class="form-options">
+            <div class="form-group">
+              <label class="form-label">動作モード</label>
+              <select id="mode" class="form-select">
+                <option value="consensus">Consensus（合議）</option>
+                <option value="integration">Integration（統合）</option>
+                <option value="synthesis">Synthesis（創発）</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">温度設定</label>
+              <select id="temperature" class="form-select">
+                <option value="0.2">保守的（0.2）</option>
+                <option value="0.5">バランス（0.5）</option>
+                <option value="0.8">創造的（0.8）</option>
+              </select>
+            </div>
+          </div>
+
+          <button id="submitBtn" class="btn-submit">送信（3AI合議）</button>
+        </div>
+
+        <div id="resultArea"></div>
       </div>
-      
-      <div id="settingsStatus"></div>
+
+      <div id="stock" class="container">
+        <div class="form-container">
+          <div class="result-header">株価調査・3AI分析</div>
+
+          <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+            <input type="text" id="ticker" placeholder="ティッカー例：AAPL" maxlength="10" style="flex: 1; padding: 0.8rem; border: 1px solid #ddd; border-radius: 4px;">
+            <button id="searchStockBtn" class="btn-submit" style="width: auto; padding: 0.8rem 1.5rem;">検索</button>
+          </div>
+
+          <div class="pattern-selection">
+            <div style="font-weight: 600; margin-bottom: 1rem; font-size: 0.95rem;">分析パターンを選択</div>
+            
+            <div class="pattern-options">
+              <label class="pattern-option">
+                <input type="radio" name="pattern" value="simple" checked>
+                <div class="pattern-label">
+                  <div class="pattern-name">A. シンプル検索</div>
+                  <div class="pattern-desc">ticker → 財務データ表示</div>
+                </div>
+              </label>
+
+              <label class="pattern-option">
+                <input type="radio" name="pattern" value="analysis">
+                <div class="pattern-label">
+                  <div class="pattern-name">B. 3AI分析付き</div>
+                  <div class="pattern-desc">ticker → 3AI合議で「買い/売り」判定</div>
+                </div>
+              </label>
+
+              <label class="pattern-option">
+                <input type="radio" name="pattern" value="document">
+                <div class="pattern-label">
+                  <div class="pattern-name">C. ドキュメント解析</div>
+                  <div class="pattern-desc">ticker + PDF → 決算と株価の整合性判定</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <button id="analyzeBtn" class="btn-submit">分析開始</button>
+        </div>
+
+        <div id="stockResultArea"></div>
+      </div>
+
+      <div id="history" class="container">
+        <div class="result-container">
+          <div class="result-header">質問履歴</div>
+          <ul id="historyList" style="list-style: none;">
+            <li style="color: #999; padding: 2rem 0; text-align: center;">まだ質問履歴がありません</li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="settings" class="container">
+        <div class="result-container">
+          <div class="result-header">設定</div>
+          <div style="font-size: 0.9rem; color: #666;">
+            <div style="margin-bottom: 1rem;">Version: 2.2.0</div>
+            <div style="margin-bottom: 1rem;">Endpoint: Cloud Run</div>
+            <div id="systemStatus">ステータス: 接続中...</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
-    const API_URL = window.location.origin;
+    const VALID_USERS = { 'admin': 'magi2024', 'user': 'password123' };
+    let currentUser = null;
+    let queryHistory = [];
 
-    // 設定管理
-    function openSettings() {
-      document.getElementById('settingsModal').style.display = 'block';
-      loadSettings();
-    }
-
-    function closeSettings() {
-      document.getElementById('settingsModal').style.display = 'none';
-    }
-
-    function loadSettings() {
-      const settings = JSON.parse(localStorage.getItem('magiSettings') || '{}');
-      document.getElementById('defaultSummaryLength').value = settings.summaryLength || 'medium';
-      document.getElementById('defaultMode').value = settings.mode || 'integration';
-      document.getElementById('language').value = settings.language || 'ja';
-      document.getElementById('apiEndpoint').value = settings.apiEndpoint || API_URL;
-    }
-
-    function saveSettings() {
-      const settings = {
-        summaryLength: document.getElementById('defaultSummaryLength').value,
-        mode: document.getElementById('defaultMode').value,
-        language: document.getElementById('language').value,
-        apiEndpoint: document.getElementById('apiEndpoint').value
-      };
-      localStorage.setItem('magiSettings', JSON.stringify(settings));
-      document.getElementById('settingsStatus').innerHTML = '<div class="result" style="color: #16c784;">成功: 設定が保存されました</div>';
-      setTimeout(() => closeSettings(), 1500);
-    }
-
-    function getSettings() {
-      return JSON.parse(localStorage.getItem('magiSettings') || '{}');
-    }
-
-    window.onclick = function(event) {
-      const modal = document.getElementById('settingsModal');
-      if (event.target == modal) {
-        closeSettings();
+    // ログイン
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const id = document.getElementById('userId').value;
+      const pw = document.getElementById('userPassword').value;
+      if (VALID_USERS[id] === pw) {
+        currentUser = id;
+        document.getElementById('loginContainer').style.display = 'none';
+        document.getElementById('mainApp').classList.add('logged-in');
+        localStorage.setItem('magiUser', id);
+      } else {
+        document.getElementById('loginError').textContent = 'IDまたはパスワードが正しくありません';
+        document.getElementById('loginError').classList.add('show');
       }
+    });
+
+    // セッション確認
+    if (localStorage.getItem('magiUser') && VALID_USERS[localStorage.getItem('magiUser')]) {
+      currentUser = localStorage.getItem('magiUser');
+      document.getElementById('loginContainer').style.display = 'none';
+      document.getElementById('mainApp').classList.add('logged-in');
     }
 
-    // その他の機能
-    async function uploadFile() {
-      const fileInput = document.getElementById('fileInput');
-      const docName = document.getElementById('docName').value;
-      const uploadStatus = document.getElementById('uploadStatus');
-      
-      if (!fileInput.files[0] || !docName) {
-        uploadStatus.innerHTML = '<div class="result" style="color: #ff6b6b;">エラー: ファイルと名前を入力してください</div>';
-        return;
-      }
+    // ログアウト
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('magiUser');
+      document.getElementById('loginContainer').style.display = 'flex';
+      document.getElementById('mainApp').classList.remove('logged-in');
+      currentUser = null;
+    });
 
-      uploadStatus.innerHTML = '<div class="result" style="color: #16c784;">処理中: アップロード中です...</div>';
+    // メニュー
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+
+    menuToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('active');
+      overlay.classList.toggle('active');
+    });
+
+    overlay.addEventListener('click', () => {
+      sidebar.classList.remove('active');
+      overlay.classList.remove('active');
+    });
+
+    // タブ切り替え
+    document.querySelectorAll('.sidebar-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        const tab = e.target.dataset.tab;
+        document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
+        document.getElementById(tab).classList.add('active');
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+      });
+    });
+
+    // 質問送信
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!prompt) { alert('質問を入力してください'); return; }
       
-      const formData = new FormData();
-      formData.append('file', fileInput.files[0]);
-      formData.append('name', docName);
+      const mode = document.getElementById('mode').value;
+      const temp = document.getElementById('temperature').value;
+      
+      document.getElementById('resultArea').innerHTML = '<div class="status-message status-loading">3つのAIが思考中...</div>';
 
       try {
-        const response = await fetch(`${API_URL}/api/documents/upload`, {
-          method: 'POST',
-          body: formData
-        });
-        
-        const result = await response.json();
-        if (response.ok) {
-          uploadStatus.innerHTML = `<div class="result" style="color: #16c784;">成功: アップロード完了 (ID: ${result.docId.substring(0, 8)}...)</div>`;
-          fileInput.value = '';
-          document.getElementById('docName').value = '';
-          listDocuments();
-        } else {
-          uploadStatus.innerHTML = `<div class="result" style="color: #ff6b6b;">エラー: ${result.error}</div>`;
-        }
-      } catch (error) {
-        uploadStatus.innerHTML = `<div class="result" style="color: #ff6b6b;">エラー: ${error.message}</div>`;
-      }
-    }
-
-    async function listDocuments() {
-      try {
-        const response = await fetch(`${API_URL}/api/documents/list`);
-        const documents = await response.json();
-        
-        const listDiv = document.getElementById('documentList');
-        const select1 = document.getElementById('selectedDoc');
-        const select2 = document.getElementById('doc1');
-        const select3 = document.getElementById('doc2');
-        
-        let html = '';
-        select1.innerHTML = '<option>---選択してください---</option>';
-        select2.innerHTML = '<option>---選択してください---</option>';
-        select3.innerHTML = '<option>---選択してください---</option>';
-        
-        documents.forEach(doc => {
-          html += `<div class="document-item">
-            <strong>${doc.name}</strong><br>
-            <small>ID: ${doc.id.substring(0, 8)}... | サイズ: ${doc.textLength} 文字</small>
-          </div>`;
-          const option = `<option value="${doc.id}">${doc.name}</option>`;
-          select1.innerHTML += option;
-          select2.innerHTML += option;
-          select3.innerHTML += option;
-        });
-        
-        listDiv.innerHTML = html || '<p style="color: #888;">登録されたドキュメントはありません</p>';
-      } catch (error) {
-        console.error(error);
-      }
-    }
-
-    async function analyzeDocument() {
-      const docId = document.getElementById('selectedDoc').value;
-      const customPrompt = document.getElementById('customPrompt').value;
-      const analysisStatus = document.getElementById('analysisStatus');
-      const resultDiv = document.getElementById('result');
-      
-      if (!docId) {
-        resultDiv.innerHTML = '<div class="result" style="color: #ff6b6b;">エラー: ドキュメントを選択してください</div>';
-        return;
-      }
-
-      analysisStatus.innerHTML = '<div class="result" style="color: #16c784;">処理中: 詳細解析実行中です（15～25秒かかります）</div>';
-      resultDiv.innerHTML = '';
-
-      try {
-        const response = await fetch(`${API_URL}/api/documents/analyze`, {
+        const res = await fetch('/api/consensus', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            documentId: docId,
-            customPrompt: customPrompt || undefined,
-            mode: 'integration'
-          })
+          body: JSON.stringify({ prompt, meta: { mode, temperature: parseFloat(temp) } })
         });
-        
-        const result = await response.json();
-        analysisStatus.innerHTML = '<div class="result" style="color: #16c784;">成功: 詳細解析が完了しました</div>';
-        
-        let html = `<div class="result"><h3>最終分析結果</h3><p>${result.final}</p></div>`;
-        resultDiv.innerHTML = html;
-      } catch (error) {
-        analysisStatus.innerHTML = '<div class="result" style="color: #ff6b6b;">エラー: 解析処理に失敗しました</div>';
-        resultDiv.innerHTML = `<div class="result" style="color: #ff6b6b;">詳細: ${error.message}</div>`;
+        const data = await res.json();
+        document.getElementById('resultArea').innerHTML = `
+          <div class="result-container">
+            <div class="result-header">回答</div>
+            <div class="final-answer">
+              <div class="final-label">最終回答</div>
+              <div class="final-text">${data.final}</div>
+            </div>
+            <div class="metrics">
+              <div class="metric-item"><div class="metric-value">${data.mode}</div><div class="metric-label">モード</div></div>
+              <div class="metric-item"><div class="metric-value">${data.metrics.response_time_ms}ms</div><div class="metric-label">応答時間</div></div>
+              <div class="metric-item"><div class="metric-value">${data.metrics.valid_responses}/3</div><div class="metric-label">成功数</div></div>
+            </div>
+          </div>
+        `;
+        queryHistory.unshift({ prompt, answer: data.final });
+      } catch (e) {
+        document.getElementById('resultArea').innerHTML = `<div class="status-message status-error">エラー: ${e.message}</div>`;
       }
-    }
+    });
 
-    async function summarizeDocument(mode) {
-      const docId = document.getElementById('selectedDoc').value;
-      const summaryLength = document.getElementById('summaryLength').value;
-      const analysisStatus = document.getElementById('analysisStatus');
-      const resultDiv = document.getElementById('result');
-      
-      if (!docId) {
-        resultDiv.innerHTML = '<div class="result" style="color: #ff6b6b;">エラー: ドキュメントを選択してください</div>';
+    // 株価検索
+    document.getElementById('searchStockBtn').addEventListener('click', async () => {
+      const ticker = document.getElementById('ticker').value.toUpperCase();
+      if (!ticker) { alert('ティッカーを入力してください'); return; }
+
+      try {
+        const res = await fetch('/api/stock/fetch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol: ticker })
+        });
+        const data = await res.json();
+        const fd = data.financialData;
+        document.getElementById('stockResultArea').innerHTML = `
+          <div class="result-container">
+            <div class="result-header">${ticker} - 企業情報</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div>
+                <div style="color: #666; font-size: 0.9rem;">企業名</div>
+                <div style="font-weight: 600; margin-bottom: 1rem;">${fd.companyName}</div>
+                <div style="color: #666; font-size: 0.9rem;">現在株価</div>
+                <div style="font-weight: 600; font-size: 1.2rem;">$${fd.currentPrice}</div>
+              </div>
+              <div>
+                <div style="color: #666; font-size: 0.9rem;">時価総額</div>
+                <div style="font-weight: 600; margin-bottom: 1rem;">$${(fd.marketCap / 1e9).toFixed(2)}B</div>
+                <div style="color: #666; font-size: 0.9rem;">PER</div>
+                <div style="font-weight: 600;">${fd.per}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        document.getElementById('stockResultArea').innerHTML = `<div class="status-message status-error">エラー: ${e.message}</div>`;
+      }
+    });
+
+    // 分析開始
+    document.getElementById('analyzeBtn').addEventListener('click', async () => {
+      const ticker = document.getElementById('ticker').value.toUpperCase();
+      const pattern = document.querySelector('input[name="pattern"]:checked').value;
+
+      if (!ticker) { alert('ティッカーを入力してください'); return; }
+
+      if (pattern === 'simple') {
+        document.getElementById('searchStockBtn').click();
         return;
       }
 
-      const modeLabel = mode === 'grok' ? '高速' : '高品質';
-      analysisStatus.innerHTML = `<div class="result" style="color: #16c784;">処理中: 要約生成中です（${modeLabel}モード、10～25秒かかります）</div>`;
-      resultDiv.innerHTML = '';
+      let prompt = pattern === 'analysis' 
+        ? `${ticker}は買いか売りか、3つの視点から分析してください`
+        : `${ticker}の決算と現在株価は妥当か、3つの視点から分析してください`;
+
+      document.getElementById('stockResultArea').innerHTML = '<div class="status-message status-loading">3つのAIが分析中...</div>';
 
       try {
-        const response = await fetch(`${API_URL}/api/documents/summarize`, {
+        const res = await fetch('/api/consensus', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            documentId: docId,
-            language: 'ja',
-            length: summaryLength,
-            mode: mode
-          })
+          body: JSON.stringify({ prompt, meta: { mode: 'integration', temperature: 0.3 } })
         });
-        
-        const result = await response.json();
-        analysisStatus.innerHTML = `<div class="result" style="color: #16c784;">成功: 要約生成が完了しました（${modeLabel}）</div>`;
-        
-        let html = `<div class="result">
-          <h3>決算報告書要約（${modeLabel}）</h3>
-          <p>${result.final}</p>
-          <small>長さ: ${summaryLength} | モデル: ${result.model} | 生成時刻: ${result.summaryTime}</small>
-        </div>`;
-        resultDiv.innerHTML = html;
-      } catch (error) {
-        analysisStatus.innerHTML = '<div class="result" style="color: #ff6b6b;">エラー: 要約生成に失敗しました</div>';
-        resultDiv.innerHTML = `<div class="result" style="color: #ff6b6b;">詳細: ${error.message}</div>`;
+        const data = await res.json();
+        document.getElementById('stockResultArea').innerHTML = `
+          <div class="result-container">
+            <div class="result-header">分析結果：${ticker}</div>
+            <div class="final-answer">
+              <div class="final-label">3AI統合判断</div>
+              <div class="final-text">${data.final}</div>
+            </div>
+            <div class="metrics">
+              <div class="metric-item"><div class="metric-value">${data.mode}</div><div class="metric-label">モード</div></div>
+              <div class="metric-item"><div class="metric-value">${data.metrics.response_time_ms}ms</div><div class="metric-label">応答時間</div></div>
+              <div class="metric-item"><div class="metric-value">${data.metrics.valid_responses}/3</div><div class="metric-label">成功数</div></div>
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        document.getElementById('stockResultArea').innerHTML = `<div class="status-message status-error">エラー: ${e.message}</div>`;
       }
-    }
-
-    async function compareDocuments() {
-      const doc1 = document.getElementById('doc1').value;
-      const doc2 = document.getElementById('doc2').value;
-      const compareResult = document.getElementById('compareResult');
-      
-      if (!doc1 || !doc2) {
-        compareResult.innerHTML = '<div class="result" style="color: #ff6b6b;">エラー: 2つのドキュメントを選択してください</div>';
-        return;
-      }
-
-      compareResult.innerHTML = '<div class="result" style="color: #16c784;">処理中: 比較分析実行中です...</div>';
-
-      try {
-        const response = await fetch(`${API_URL}/api/documents/compare`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ doc1Id: doc1, doc2Id: doc2, mode: 'integration' })
-        });
-        
-        const result = await response.json();
-        compareResult.innerHTML = `<div class="result"><h3>比較分析結果</h3><p>${result.final}</p></div>`;
-      } catch (error) {
-        compareResult.innerHTML = `<div class="result" style="color: #ff6b6b;">エラー: ${error.message}</div>`;
-      }
-    }
-
-    listDocuments();
+    });
   </script>
 </body>
 </html>
