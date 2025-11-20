@@ -3,10 +3,9 @@
 const app = global.app;
 const { GoogleAuth } = require('google-auth-library');
 
-// GoogleAuth インスタンス
 let googleAuth = null;
 
-// Identity Token を取得する関数
+// ✅ 正しい Identity Token 取得方法
 const getIdToken = async () => {
   try {
     if (!googleAuth) {
@@ -14,17 +13,24 @@ const getIdToken = async () => {
     }
     
     const targetAudience = 'https://asia-northeast1-screen-share-459802.cloudfunctions.net';
+    
+    // Cloud Run 内では、GoogleAuth が自動的にメタデータサーバーから
+    // Identity Token を取得する IdTokenClient を作成
     const client = await googleAuth.getIdTokenClient(targetAudience);
     
-    // リクエストを作成（トークン取得用）
-    const res = await client.request({
-      url: targetAudience,
-      method: 'GET'
-    });
+    // リクエストヘッダーを取得（これが Authorization: Bearer {token} を含む）
+    const headers = await client.getRequestHeaders?.() || {};
+    const authHeader = headers.Authorization || headers.authorization || '';
     
-    // Authorization ヘッダーから Bearer トークンを抽出
-    const authHeader = res.config?.headers?.Authorization || '';
-    return authHeader.replace('Bearer ', '').trim();
+    // "Bearer {token}" から "token" を抽出
+    const token = authHeader.replace('Bearer ', '').trim();
+    
+    if (token) {
+      return token;
+    } else {
+      console.error('ID Token取得エラー: Authorization ヘッダーが取得できません');
+      return '';
+    }
   } catch (e) {
     console.error('ID Token取得エラー:', e.message);
     return '';
@@ -51,7 +57,7 @@ app.post('/api/consensus', async (req, res) => {
 });
 
 // ============================================================
-// 2. /api/stock/search - Authorization ヘッダーを自動追加
+// 2. /api/stock/search
 // ============================================================
 app.post('/api/stock/search', async (req, res) => {
   try {
@@ -61,7 +67,7 @@ app.post('/api/stock/search', async (req, res) => {
     const fetch = await loadFetch();
     const token = await getIdToken();
     
-    console.log('Calling fetchStockData with token:', token ? 'YES' : 'NO');
+    console.log('✅ /api/stock/search: token obtained:', token ? 'YES' : 'NO');
     
     const response = await fetch(
       'https://asia-northeast1-screen-share-459802.cloudfunctions.net/fetchStockData',
@@ -75,18 +81,22 @@ app.post('/api/stock/search', async (req, res) => {
       }
     );
     
-    console.log('fetchStockData response status:', response.status);
+    console.log('✅ fetchStockData response:', response.status);
+    
+    if (!response.ok) {
+      console.error('❌ fetchStockData error:', response.status, response.statusText);
+    }
     
     const data = await response.json();
     res.json(data);
   } catch (e) {
-    console.error('stock/search error:', e.message);
+    console.error('❌ stock/search error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
 // ============================================================
-// 3. /api/documents/search-similar - Authorization ヘッダーを自動追加
+// 3. /api/documents/search-similar
 // ============================================================
 app.post('/api/documents/search-similar', async (req, res) => {
   try {
