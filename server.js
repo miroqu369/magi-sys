@@ -1,41 +1,7 @@
 'use strict';
 
 const app = global.app;
-const { GoogleAuth } = require('google-auth-library');
-
-let auth = null;
-
-// GoogleAuth を初期化
-const initAuth = async () => {
-  if (!auth) {
-    auth = new GoogleAuth();
-  }
-  return auth;
-};
-
-// Identity Token を取得
-const getIdToken = async () => {
-  try {
-    const googleAuth = await initAuth();
-    const targetAudience = 'https://asia-northeast1-screen-share-459802.cloudfunctions.net';
-    const client = await googleAuth.getIdTokenClient(targetAudience);
-    const res = await client.request({
-      url: targetAudience,
-      method: 'GET'
-    });
-    // Authorization ヘッダーから Bearer トークンを抽出
-    const authHeader = res.config?.headers?.authorization || '';
-    return authHeader.replace('Bearer ', '');
-  } catch (e) {
-    console.error('ID Token取得エラー:', e.message);
-    return '';
-  }
-};
-
-const loadFetch = async () => {
-  const mod = await import('node-fetch');
-  return mod.default;
-};
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 // 1. /api/consensus
 app.post('/api/consensus', async (req, res) => {
@@ -54,16 +20,13 @@ app.post('/api/stock/search', async (req, res) => {
     const { ticker } = req.body;
     if (!ticker) return res.status(400).json({ error: 'ticker required' });
     
-    const fetch = await loadFetch();
-    const token = await getIdToken();
-    
-    const response = await fetch(
+    const f = await fetch;
+    const response = await f(
       'https://asia-northeast1-screen-share-459802.cloudfunctions.net/fetchStockData',
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ ticker })
       }
@@ -72,6 +35,7 @@ app.post('/api/stock/search', async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (e) {
+    console.error('stock/search error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
@@ -82,16 +46,13 @@ app.post('/api/documents/search-similar', async (req, res) => {
     const { query, top_k = 10, threshold = 0.5 } = req.body;
     if (!query) return res.status(400).json({ error: 'query required' });
     
-    const fetch = await loadFetch();
-    const token = await getIdToken();
-    
-    const response = await fetch(
+    const f = await fetch;
+    const response = await f(
       'https://asia-northeast1-screen-share-459802.cloudfunctions.net/searchSimilar',
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ query, top_k, threshold })
       }
@@ -100,6 +61,7 @@ app.post('/api/documents/search-similar', async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (e) {
+    console.error('search-similar error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
