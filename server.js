@@ -11,15 +11,17 @@ const GrokProvider = require('./providers/grok');
 const GeminiProvider = require('./providers/gemini');
 const AnthropicProvider = require('./providers/anthropic');
 const OpenAIProvider = require('./providers/openai');
+const MistralProvider = require('./providers/mistral');
 
 // Initialize providers
-let grok, gemini, anthropic, openai;
+let grok, gemini, anthropic, openai, mistral;
 try {
   grok = new GrokProvider();
   gemini = new GeminiProvider();
   anthropic = new AnthropicProvider();
   openai = new OpenAIProvider();
-  console.log('✅ All providers initialized');
+  mistral = { chat: require('./providers/mistral').chat };
+  console.log('✅ All 5 providers initialized');
 } catch (err) {
   console.error('Provider initialization error:', err);
 }
@@ -52,11 +54,13 @@ app.post('/api/consensus', async (req, res) => {
 
     console.log(`Processing ${mode} mode for: ${prompt.substring(0, 50)}...`);
 
-    // Execute parallel requests to all AI providers
+    // Execute parallel requests to all AI providers (5 AIs)
     const results = await Promise.allSettled([
       grok.chat(prompt, meta),
       gemini.chat(prompt, meta),
-      anthropic.chat(prompt, meta)
+      anthropic.chat(prompt, meta),
+      openai.chat(prompt, meta),
+      mistral.chat(prompt, meta)
     ]);
 
     // Format responses
@@ -81,6 +85,20 @@ app.post('/api/consensus', async (req, res) => {
         role: '人間的・感情的分析',
         ok: results[2].status === 'fulfilled',
         text: results[2].status === 'fulfilled' ? results[2].value : 'Error: No response'
+      },
+      {
+        provider: 'gpt',
+        magi_unit: 'MARY-4',
+        role: '統合的・バランス分析',
+        ok: results[3].status === 'fulfilled',
+        text: results[3].status === 'fulfilled' ? results[3].value : 'Error: No response'
+      },
+      {
+        provider: 'mistral',
+        magi_unit: 'SOPHIA-5',
+        role: '実践的・戦略的分析',
+        ok: results[4].status === 'fulfilled',
+        text: results[4].status === 'fulfilled' ? results[4].value : 'Error: No response'
       }
     ];
 
@@ -89,7 +107,7 @@ app.post('/api/consensus', async (req, res) => {
     const metrics = {
       response_time_ms: Date.now() - startTime,
       valid_responses: validResponses.length,
-      agreement_ratio: validResponses.length / 3,
+      agreement_ratio: validResponses.length / 5,
       timestamp: new Date().toISOString()
     };
 
