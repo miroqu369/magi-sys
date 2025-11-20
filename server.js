@@ -60,3 +60,5 @@ console.log('[SERVER] Ready');
 // Stock search route
 const stockSearchRoute = require('./routes/stock-search');
 app.use(stockSearchRoute);
+const docSearchRoute = require('./routes/document-search');
+app.use(docSearchRoute);

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Research - MAGI System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .container { background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 40px; max-width: 600px; width: 90%; }
+    h1 { color: #333; margin-bottom: 30px; text-align: center; font-size: 28px; }
+    .search-box { display: flex; gap: 10px; margin-bottom: 30px; }
+    input { flex: 1; padding: 12px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; transition: border-color 0.3s; }
+    input:focus { outline: none; border-color: #667eea; }
+    button { padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; transition: background 0.3s; }
+    button:hover { background: #764ba2; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .loading { text-align: center; color: #667eea; font-weight: 600; }
+    .results { margin-top: 30px; }
+    .result-card { background: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    .company-name { font-size: 20px; font-weight: 700; color: #333; margin-bottom: 15px; }
+    .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .metric { background: white; padding: 12px; border-radius: 6px; }
+    .metric-label { font-size: 12px; color: #666; text-transform: uppercase; font-weight: 600; margin-bottom: 5px; }
+    .metric-value { font-size: 18px; font-weight: 700; color: #667eea; }
+    .error { background: #fee; border-left-color: #f00; color: #c33; }
+    .empty { text-align: center; color: #999; padding: 40px 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Stock Research</h1>
+    
+    <div class="search-box">
+      <input type="text" id="tickerInput" placeholder="Enter ticker (e.g., AAPL, TSLA, GOOGL)" />
+      <button id="searchBtn">Search</button>
+    </div>
+
+    <div id="results" class="results"></div>
+  </div>
+
+  <script>
+    const searchBtn = document.getElementById('searchBtn');
+    const tickerInput = document.getElementById('tickerInput');
+    const resultsDiv = document.getElementById('results');
+
+    async function searchStock() {
+      const ticker = tickerInput.value.trim().toUpperCase();
+      if (!ticker) return alert('Please enter a ticker');
+
+      searchBtn.disabled = true;
+      searchBtn.textContent = 'Searching...';
+      resultsDiv.innerHTML = '<div class="loading">🔍 Fetching data...</div>';
+
+      try {
+        const response = await fetch('/api/stock/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticker })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+          resultsDiv.innerHTML = `<div class="result-card error"><strong>Error:</strong> ${data.error}</div>`;
+          return;
+        }
+
+        const d = data.data;
+        const html = `
+          <div class="result-card">
+            <div class="company-name">${data.ticker} - ${data.company_name}</div>
+            <div class="metrics">
+              <div class="metric">
+                <div class="metric-label">Price (USD)</div>
+                <div class="metric-value">${d.price ? '$' + d.price.toFixed(2) : 'N/A'}</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">P/B Ratio</div>
+                <div class="metric-value">${d.pbr ? d.pbr.toFixed(2) : 'N/A'}</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">P/E Ratio</div>
+                <div class="metric-value">${d.per ? d.per.toFixed(2) : 'N/A'}</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">Beta</div>
+                <div class="metric-value">${d.beta ? d.beta.toFixed(2) : 'N/A'}</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">EV/EBITDA</div>
+                <div class="metric-value">${d.ev_ebitda ? d.ev_ebitda.toFixed(2) : 'N/A'}</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">ROE</div>
+                <div class="metric-value">${d.roe ? d.roe.toFixed(2) + '%' : 'N/A'}</div>
+              </div>
+            </div>
+          </div>
+        `;
+        resultsDiv.innerHTML = html;
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="result-card error"><strong>Error:</strong> ${error.message}</div>`;
+      } finally {
+        searchBtn.disabled = false;
+        searchBtn.textContent = 'Search';
+      }
+    }
+
+    searchBtn.addEventListener('click', searchStock);
+    tickerInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') searchStock();
+    });
+  </script>
+</body>
+</html>
