@@ -1,38 +1,33 @@
 'use strict';
 
 const app = global.app;
-const { GoogleAuth } = require('google-auth-library');
 
-let googleAuth = null;
-
-// ✅ 正しい Identity Token 取得方法
+// ✅ Cloud Run のメタデータサーバーから直接 Identity Token を取得
 const getIdToken = async () => {
   try {
-    if (!googleAuth) {
-      googleAuth = new GoogleAuth();
-    }
+    const fetch = await (async () => {
+      const mod = await import('node-fetch');
+      return mod.default;
+    })();
     
-    const targetAudience = 'https://asia-northeast1-screen-share-459802.cloudfunctions.net';
+    const metadataUrl = 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=https://asia-northeast1-screen-share-459802.cloudfunctions.net';
     
-    // Cloud Run 内では、GoogleAuth が自動的にメタデータサーバーから
-    // Identity Token を取得する IdTokenClient を作成
-    const client = await googleAuth.getIdTokenClient(targetAudience);
+    const response = await fetch(metadataUrl, {
+      headers: {
+        'Metadata-Flavor': 'Google'
+      }
+    });
     
-    // リクエストヘッダーを取得（これが Authorization: Bearer {token} を含む）
-    const headers = await client.getRequestHeaders?.() || {};
-    const authHeader = headers.Authorization || headers.authorization || '';
-    
-    // "Bearer {token}" から "token" を抽出
-    const token = authHeader.replace('Bearer ', '').trim();
-    
-    if (token) {
-      return token;
-    } else {
-      console.error('ID Token取得エラー: Authorization ヘッダーが取得できません');
+    if (!response.ok) {
+      console.error('❌ Metadata server error:', response.status);
       return '';
     }
+    
+    const token = await response.text();
+    console.log('✅ Token obtained from metadata server:', token ? 'YES' : 'NO');
+    return token.trim();
   } catch (e) {
-    console.error('ID Token取得エラー:', e.message);
+    console.error('❌ ID Token取得エラー:', e.message);
     return '';
   }
 };
@@ -67,7 +62,10 @@ app.post('/api/stock/search', async (req, res) => {
     const fetch = await loadFetch();
     const token = await getIdToken();
     
-    console.log('✅ /api/stock/search: token obtained:', token ? 'YES' : 'NO');
+    if (!token) {
+      console.error('❌ No token received');
+      return res.status(500).json({ error: 'Failed to obtain Identity Token' });
+    }
     
     const response = await fetch(
       'https://asia-northeast1-screen-share-459802.cloudfunctions.net/fetchStockData',
@@ -84,7 +82,9 @@ app.post('/api/stock/search', async (req, res) => {
     console.log('✅ fetchStockData response:', response.status);
     
     if (!response.ok) {
-      console.error('❌ fetchStockData error:', response.status, response.statusText);
+      const text = await response.text();
+      console.error('❌ Cloud Function error:', response.status, text.substring(0, 100));
+      return res.status(response.status).json({ error: text });
     }
     
     const data = await response.json();
@@ -106,6 +106,10 @@ app.post('/api/documents/search-similar', async (req, res) => {
     const fetch = await loadFetch();
     const token = await getIdToken();
     
+    if (!token) {
+      return res.status(500).json({ error: 'Failed to obtain Identity Token' });
+    }
+    
     const response = await fetch(
       'https://asia-northeast1-screen-share-459802.cloudfunctions.net/searchSimilar',
       {
@@ -117,6 +121,11 @@ app.post('/api/documents/search-similar', async (req, res) => {
         body: JSON.stringify({ query, top_k, threshold })
       }
     );
+    
+    if (!response.ok) {
+      const text = await response.text();
+      return res.status(response.status).json({ error: text });
+    }
     
     const data = await response.json();
     res.json(data);
