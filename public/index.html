@@ -7,7 +7,6 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5; color: #333; line-height: 1.6; }
-    
     .login-container { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 2000; }
     .login-box { background-color: white; padding: 3rem; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 100%; max-width: 400px; }
     .login-title { font-size: 1.8rem; font-weight: 600; margin-bottom: 0.5rem; text-align: center; }
@@ -17,95 +16,71 @@
     .form-input:focus { outline: none; border-color: #667eea; background-color: #f9f9f9; }
     .login-btn { width: 100%; padding: 0.8rem; background-color: #667eea; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
     .login-btn:hover { background-color: #5568d3; }
-    .login-error { background-color: #ffebee; color: #c62828; padding: 0.75rem; border-radius: 4px; font-size: 0.85rem; display: none; margin-bottom: 0.5rem; border-left: 3px solid #c62828; }
-    .login-error.show { display: block; }
-    .login-demo { background-color: #f0f4ff; padding: 1rem; border-radius: 4px; margin-top: 1.5rem; font-size: 0.8rem; color: #667eea; border-left: 3px solid #667eea; }
-    
     .main-app { display: none; }
     .main-app.logged-in { display: block; }
-    
     .header { background-color: #fff; border-bottom: 1px solid #e0e0e0; padding: 1rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .header-left { display: flex; align-items: center; gap: 1rem; }
     .header-title { font-size: 1.2rem; font-weight: 600; letter-spacing: 0.5px; }
-    .logo { text-align: center; line-height: 1.2; }
-    .logo-text { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.3em; }
-    .logo-line { font-size: 0.9rem; letter-spacing: 0.15em; color: #666; margin-top: 0.2rem; }
-    .menu-toggle:hover { color: #333; }
+    .menu-toggle { background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0.5rem; color: #666; }
     .logout-btn { padding: 0.4rem 0.8rem; background-color: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 0.85rem; color: #666; }
-    .logout-btn:hover { background-color: #ffebee; border-color: #c62828; color: #c62828; }
-    
     .sidebar { position: fixed; left: 0; top: 0; width: 250px; height: 100vh; background-color: #f9f9f9; border-right: 1px solid #e0e0e0; transform: translateX(-250px); transition: transform 0.3s ease; z-index: 1000; overflow-y: auto; padding-top: 3rem; }
     .sidebar.active { transform: translateX(0); }
     .sidebar-menu { list-style: none; }
     .sidebar-menu button { display: block; width: 100%; padding: 1rem; background: none; border: none; text-align: left; cursor: pointer; font-size: 0.95rem; color: #555; transition: all 0.2s; }
     .sidebar-menu button:hover { background-color: #efefef; color: #333; padding-left: 1.5rem; }
     .sidebar-menu button.active { background-color: #e8e8e8; color: #000; font-weight: 600; padding-left: 1.5rem; }
-    
     .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.3); display: none; z-index: 999; }
     .overlay.active { display: block; }
-    
     .main-content { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
     .container { display: none; }
     .container.active { display: block; }
-    
     .form-container { background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
     .form-group { margin-bottom: 1.5rem; }
-    .form-input, .form-select, textarea { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 0.95rem; }
-    textarea { resize: vertical; min-height: 120px; }
+    textarea { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 0.95rem; resize: vertical; min-height: 120px; }
     .form-options { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    .form-select { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 0.95rem; }
     .btn-submit { width: 100%; padding: 0.8rem; background-color: #333; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; }
     .btn-submit:hover { background-color: #555; }
-    .btn-submit:disabled { background-color: #ccc; }
-    
     .result-container { background-color: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 2rem; }
     .result-header { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px solid #e0e0e0; }
     .final-answer { background-color: #f9f9f9; padding: 1.5rem; border-radius: 4px; margin-bottom: 2rem; border-left: 4px solid #333; }
     .final-label { font-size: 0.85rem; color: #666; margin-bottom: 0.5rem; font-weight: 600; text-transform: uppercase; }
     .final-text { color: #333; line-height: 1.8; }
-    
     .metrics { margin-top: 2rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0e0; }
     .metric-item { text-align: center; }
     .metric-value { font-size: 1.2rem; font-weight: 600; color: #333; }
     .metric-label { font-size: 0.75rem; color: #999; margin-top: 0.3rem; text-transform: uppercase; }
-    
     .status-message { padding: 1rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; }
     .status-loading { background-color: #e3f2fd; color: #1565c0; border-left: 4px solid #1565c0; }
     .status-error { background-color: #ffebee; color: #c62828; border-left: 4px solid #c62828; }
-    
-    .pattern-selection { margin-bottom: 2rem; padding: 1.5rem; background-color: #f9f9f9; border-radius: 4px; border-left: 4px solid #333; }
     .pattern-options { display: flex; flex-direction: column; gap: 1rem; }
-    .pattern-option { display: flex; align-items: flex-start; gap: 0.75rem; }
+    .pattern-option { display: flex; align-items: flex-start; gap: 1rem; }
+    .pattern-option input[type="radio"] { margin-top: 0.4rem; cursor: pointer; }
     .pattern-label { flex: 1; cursor: pointer; }
     .pattern-name { font-weight: 600; color: #333; margin-bottom: 0.3rem; }
     .pattern-desc { font-size: 0.85rem; color: #666; }
+    .upload-container { display: none; margin-top: 1.5rem; padding: 1.5rem; background-color: #f9f9f9; border-radius: 4px; border: 2px dashed #ddd; }
+    .upload-container.active { display: block; }
+    .upload-label { display: block; font-weight: 600; margin-bottom: 1rem; color: #333; font-size: 0.95rem; }
+    .upload-input { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
   </style>
 </head>
 <body>
+
   <div class="login-container" id="loginContainer">
     <div class="login-box">
       <div class="login-title">Magi</div>
-      <div style="text-align: center; font-size: 0.9rem; color: #999; margin-bottom: 2rem;">3AI合議 + 株価調査</div>
-      
-      <div class="login-error" id="loginError"></div>
-
       <form class="login-form" id="loginForm">
         <div class="form-group">
           <label class="form-label">ユーザーID</label>
-          <input type="text" id="userId" class="form-input" placeholder="IDを入力" required>
+          <input type="text" id="userId" class="form-input" placeholder="admin" required>
         </div>
-
         <div class="form-group">
           <label class="form-label">パスワード</label>
-          <input type="password" id="userPassword" class="form-input" placeholder="パスワードを入力" required>
+          <input type="password" id="userPassword" class="form-input" placeholder="magi2024" required>
         </div>
-
         <button type="submit" class="login-btn">ログイン</button>
       </form>
-
-      <div class="login-demo">
-        <div style="font-weight: 600; margin-bottom: 0.3rem;">デモアカウント</div>
-        ID: admin<br>PASS: magi2024
-      </div>
     </div>
   </div>
 
@@ -129,13 +104,13 @@
     </aside>
 
     <div class="main-content">
+      
       <div id="question" class="container active">
         <div class="form-container">
           <div class="form-group">
             <label class="form-label">質問内容</label>
             <textarea id="prompt" placeholder="ここに質問を入力してください..."></textarea>
           </div>
-
           <div class="form-options">
             <div class="form-group">
               <label class="form-label">動作モード</label>
@@ -154,28 +129,25 @@
               </select>
             </div>
           </div>
-
           <button id="submitBtn" class="btn-submit">送信（3AI合議）</button>
         </div>
-
         <div id="resultArea"></div>
       </div>
 
       <div id="stock" class="container">
         <div class="form-container">
           <div class="result-header">株価調査・3AI分析</div>
-
           <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
             <input type="text" id="ticker" placeholder="ティッカー例：AAPL" maxlength="10" style="flex: 1; padding: 0.8rem; border: 1px solid #ddd; border-radius: 4px;">
             <button id="searchStockBtn" class="btn-submit" style="width: auto; padding: 0.8rem 1.5rem;">検索</button>
           </div>
 
-          <div class="pattern-selection">
+          <div style="margin-bottom: 2rem; padding: 1.5rem; background-color: #f9f9f9; border-radius: 4px; border-left: 4px solid #333;">
             <div style="font-weight: 600; margin-bottom: 1rem; font-size: 0.95rem;">分析パターンを選択</div>
             
             <div class="pattern-options">
               <label class="pattern-option">
-                <input type="radio" name="pattern" value="simple" checked>
+                <input type="radio" name="pattern" value="simple">
                 <div class="pattern-label">
                   <div class="pattern-name">A. シンプル検索</div>
                   <div class="pattern-desc">ticker → 財務データ表示</div>
@@ -183,7 +155,7 @@
               </label>
 
               <label class="pattern-option">
-                <input type="radio" name="pattern" value="analysis">
+                <input type="radio" name="pattern" value="analysis" checked>
                 <div class="pattern-label">
                   <div class="pattern-name">B. 3AI分析付き</div>
                   <div class="pattern-desc">ticker → 3AI合議で「買い/売り」判定</div>
@@ -198,11 +170,15 @@
                 </div>
               </label>
             </div>
+
+            <div class="upload-container" id="uploadContainer">
+              <label class="upload-label">📄 決算報告書をアップロード</label>
+              <input type="file" id="stockDocument" class="upload-input" accept=".pdf,.txt">
+            </div>
           </div>
 
           <button id="analyzeBtn" class="btn-submit">分析開始</button>
         </div>
-
         <div id="stockResultArea"></div>
       </div>
 
@@ -219,21 +195,20 @@
         <div class="result-container">
           <div class="result-header">設定</div>
           <div style="font-size: 0.9rem; color: #666;">
-            <div style="margin-bottom: 1rem;">Version: 2.2.0</div>
+            <div style="margin-bottom: 1rem;">Version: 4.0</div>
             <div style="margin-bottom: 1rem;">Endpoint: Cloud Run</div>
-            <div id="systemStatus">ステータス: 接続中...</div>
+            <div>ステータス: 接続中...</div>
           </div>
         </div>
       </div>
+
     </div>
   </div>
 
   <script>
-    const VALID_USERS = { 'admin': 'magi2024', 'user': 'password123' };
+    const VALID_USERS = { 'admin': 'magi2024' };
     let currentUser = null;
-    let queryHistory = [];
 
-    // ログイン
     document.getElementById('loginForm').addEventListener('submit', (e) => {
       e.preventDefault();
       const id = document.getElementById('userId').value;
@@ -242,29 +217,9 @@
         currentUser = id;
         document.getElementById('loginContainer').style.display = 'none';
         document.getElementById('mainApp').classList.add('logged-in');
-        localStorage.setItem('magiUser', id);
-      } else {
-        document.getElementById('loginError').textContent = 'IDまたはパスワードが正しくありません';
-        document.getElementById('loginError').classList.add('show');
       }
     });
 
-    // セッション確認
-    if (localStorage.getItem('magiUser') && VALID_USERS[localStorage.getItem('magiUser')]) {
-      currentUser = localStorage.getItem('magiUser');
-      document.getElementById('loginContainer').style.display = 'none';
-      document.getElementById('mainApp').classList.add('logged-in');
-    }
-
-    // ログアウト
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-      localStorage.removeItem('magiUser');
-      document.getElementById('loginContainer').style.display = 'flex';
-      document.getElementById('mainApp').classList.remove('logged-in');
-      currentUser = null;
-    });
-
-    // メニュー
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
@@ -279,7 +234,6 @@
       overlay.classList.remove('active');
     });
 
-    // タブ切り替え
     document.querySelectorAll('.sidebar-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
@@ -292,10 +246,26 @@
       });
     });
 
-    // 質問送信
+    // パターン選択時のイベント
+    document.querySelectorAll('input[name="pattern"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const uploadContainer = document.getElementById('uploadContainer');
+        if (e.target.value === 'document') {
+          uploadContainer.classList.add('active');
+        } else {
+          uploadContainer.classList.remove('active');
+        }
+      });
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      document.getElementById('loginContainer').style.display = 'flex';
+      document.getElementById('mainApp').classList.remove('logged-in');
+    });
+
     document.getElementById('submitBtn').addEventListener('click', async () => {
       const prompt = document.getElementById('prompt').value.trim();
-      if (!prompt) { alert('質問を入力してください'); return; }
+      if (!prompt) return alert('質問を入力してください');
       
       const mode = document.getElementById('mode').value;
       const temp = document.getElementById('temperature').value;
@@ -323,16 +293,14 @@
             </div>
           </div>
         `;
-        queryHistory.unshift({ prompt, answer: data.final });
       } catch (e) {
         document.getElementById('resultArea').innerHTML = `<div class="status-message status-error">エラー: ${e.message}</div>`;
       }
     });
 
-    // 株価検索
     document.getElementById('searchStockBtn').addEventListener('click', async () => {
       const ticker = document.getElementById('ticker').value.toUpperCase();
-      if (!ticker) { alert('ティッカーを入力してください'); return; }
+      if (!ticker) return alert('ティッカーを入力してください');
 
       try {
         const res = await fetch('/api/stock/fetch', {
@@ -366,12 +334,11 @@
       }
     });
 
-    // 分析開始
     document.getElementById('analyzeBtn').addEventListener('click', async () => {
       const ticker = document.getElementById('ticker').value.toUpperCase();
       const pattern = document.querySelector('input[name="pattern"]:checked').value;
 
-      if (!ticker) { alert('ティッカーを入力してください'); return; }
+      if (!ticker) return alert('ティッカーを入力してください');
 
       if (pattern === 'simple') {
         document.getElementById('searchStockBtn').click();
