@@ -3,18 +3,31 @@
 const app = global.app;
 const { GoogleAuth } = require('google-auth-library');
 
-// Identity Token を取得
-let idToken = null;
-const auth = new GoogleAuth();
+let auth = null;
 
+// GoogleAuth を初期化
+const initAuth = async () => {
+  if (!auth) {
+    auth = new GoogleAuth();
+  }
+  return auth;
+};
+
+// Identity Token を取得
 const getIdToken = async () => {
   try {
+    const googleAuth = await initAuth();
     const targetAudience = 'https://asia-northeast1-screen-share-459802.cloudfunctions.net';
-    const client = await auth.getIdTokenClient(targetAudience);
-    const response = await client.request({ url: targetAudience });
-    return response.headers.authorization.replace('Bearer ', '');
+    const client = await googleAuth.getIdTokenClient(targetAudience);
+    const res = await client.request({
+      url: targetAudience,
+      method: 'GET'
+    });
+    // Authorization ヘッダーから Bearer トークンを抽出
+    const authHeader = res.config?.headers?.authorization || '';
+    return authHeader.replace('Bearer ', '');
   } catch (e) {
-    console.error('Error getting ID token:', e.message);
+    console.error('ID Token取得エラー:', e.message);
     return '';
   }
 };
