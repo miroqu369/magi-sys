@@ -1,19 +1,20 @@
 'use strict';
 const express = require('express');
 
-// グローバル app 作成
 global.app = express();
 global.app.use(express.json({ limit: '1mb' }));
 
-console.log('✅ [bootstrap] Creating app instance');
+// ✅ /health ルート
+global.app.get('/health', (_req, res) => {
+  res.status(200).send('ok');
+});
 
-// ==========================================
-// 基盤ルート登録（server.js より前）
-// ==========================================
+// ✅ /healthz ルート（互換性のため）
 global.app.get('/healthz', (_req, res) => {
   res.status(200).send('ok');
 });
 
+// /status ルート
 global.app.get('/status', (_req, res) => {
   res.json({
     service: 'magi-app',
@@ -27,31 +28,7 @@ global.app.get('/status', (_req, res) => {
   });
 });
 
-console.log('✅ [bootstrap] /healthz and /status registered');
+try { require('./server.js'); } catch (e) { console.error('server.js:', e); }
 
-// ==========================================
-// server.js 読み込み（ビジネスロジック）
-// ==========================================
-try {
-  require('./server.js');
-  console.log('✅ [bootstrap] server.js loaded successfully');
-} catch (err) {
-  console.error('❌ [bootstrap] Error loading server.js:', err.message);
-}
-
-// ==========================================
-// listen（ここだけ）
-// ==========================================
 const PORT = Number(process.env.PORT) || 8080;
-const server = global.app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 [bootstrap] magi-app listening on :${PORT}`);
-});
-
-// グレースフルシャットダウン
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
-});
+global.app.listen(PORT, '0.0.0.0', () => console.log(`listening :${PORT}`));

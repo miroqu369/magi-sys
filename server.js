@@ -26,9 +26,6 @@ app.post('/api/consensus', async (req, res) => {
 // ==========================================
 // Stock Search API
 // ==========================================
-app.post('/api/stock/search', async (req, res) => {
-  const { ticker } = req.body;
-  if (!ticker) return res.status(400).json({ error: 'ticker required' });
   
   try {
     console.log('📈 [stock] Searching:', ticker);
@@ -76,3 +73,28 @@ app.post('/api/documents/search-similar', async (req, res) => {
 });
 
 console.log('✅ [server] All routes registered');
+
+// ✅ Stock Search Route
+app.post('/api/stock/search', async (req, res) => {
+  const { ticker } = req.body;
+  if (!ticker) {
+    res.status(400).json({ error: 'ticker required' });
+    return;
+  }
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const funcUrl = 'https://asia-northeast1-screen-share-459802.cloudfunctions.net/fetchStockData';
+    const response = await fetch(funcUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GCP_IDENTITY_TOKEN || ''}`
+      },
+      body: JSON.stringify({ ticker })
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
