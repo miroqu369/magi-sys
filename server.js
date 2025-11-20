@@ -62,3 +62,40 @@ const stockSearchRoute = require('./routes/stock-search');
 app.use(stockSearchRoute);
 const docSearchRoute = require('./routes/document-search');
 app.use(docSearchRoute);
+
+// Cloud Function ルート統合
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+
+app.post('/api/stock/search', async (req, res) => {
+  const { ticker } = req.body;
+  if (!ticker) return res.status(400).json({ error: 'ticker required' });
+  try {
+    const response = await fetch('https://asia-northeast1-screen-share-459802.cloudfunctions.net/fetchStockData', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.GCP_IDENTITY_TOKEN || ''}` },
+      body: JSON.stringify({ ticker })
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/documents/search-similar', async (req, res) => {
+  const { query, top_k = 10, threshold = 0.5 } = req.body;
+  if (!query) return res.status(400).json({ error: 'query required' });
+  try {
+    const response = await fetch('https://asia-northeast1-screen-share-459802.cloudfunctions.net/searchSimilar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.GCP_IDENTITY_TOKEN || ''}` },
+      body: JSON.stringify({ query, top_k, threshold })
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+console.log('✅ Cloud Function routes ready');
