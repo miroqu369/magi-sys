@@ -4,9 +4,11 @@ const express = require('express');
 global.app = express();
 global.app.use(express.json({ limit: '1mb' }));
 
-// 基本ルート
+// /health - 認証不要
 global.app.get('/health', (_req, res) => res.status(200).send('ok'));
 global.app.get('/healthz', (_req, res) => res.status(200).send('ok'));
+
+// /status - 認証不要
 global.app.get('/status', (_req, res) => res.json({
   service: 'magi-app',
   time: new Date().toISOString(),
