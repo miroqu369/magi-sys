@@ -1,25 +1,57 @@
 'use strict';
 const express = require('express');
 
+// グローバル app 作成
 global.app = express();
-app.use(express.json({ limit: '1mb' }));
+global.app.use(express.json({ limit: '1mb' }));
 
-// 基盤ルート
-app.get('/healthz', (_req, res) => res.status(200).send('ok'));
-app.get('/status', (_req, res) => res.json({
-  service: 'magi-app',
-  time: new Date().toISOString(),
-  secrets: {
-    OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
-    GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
-    XAI_API_KEY: !!process.env.XAI_API_KEY,
-    ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY
-  }
-}));
+console.log('✅ [bootstrap] Creating app instance');
 
-// server.js 読込
-try { require('./server.js'); } catch (e) { console.error('server.js error:', e); }
+// ==========================================
+// 基盤ルート登録（server.js より前）
+// ==========================================
+global.app.get('/healthz', (_req, res) => {
+  res.status(200).send('ok');
+});
 
-// listen
+global.app.get('/status', (_req, res) => {
+  res.json({
+    service: 'magi-app',
+    time: new Date().toISOString(),
+    secrets: {
+      OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+      GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
+      XAI_API_KEY: !!process.env.XAI_API_KEY,
+      ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY
+    }
+  });
+});
+
+console.log('✅ [bootstrap] /healthz and /status registered');
+
+// ==========================================
+// server.js 読み込み（ビジネスロジック）
+// ==========================================
+try {
+  require('./server.js');
+  console.log('✅ [bootstrap] server.js loaded successfully');
+} catch (err) {
+  console.error('❌ [bootstrap] Error loading server.js:', err.message);
+}
+
+// ==========================================
+// listen（ここだけ）
+// ==========================================
 const PORT = Number(process.env.PORT) || 8080;
-app.listen(PORT, '0.0.0.0', () => console.log(`listening :${PORT}`));
+const server = global.app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 [bootstrap] magi-app listening on :${PORT}`);
+});
+
+// グレースフルシャットダウン
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});

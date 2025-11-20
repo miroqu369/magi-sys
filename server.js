@@ -1,101 +1,78 @@
 'use strict';
-const express = require('express');
-const path = require('path');
 
-const app = global.app || express();
-app.use(express.json({ limit: '1mb' }));
-app.use(express.static('public'));
-
-// GET /
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// POST /api/consensus
-app.post('/api/consensus', async (req, res) => {
-  try {
-    const { prompt, meta = {} } = req.body;
-    const mode = meta.mode || 'consensus';
-    if (!prompt) return res.status(400).json({ error: 'prompt required' });
-    return res.json({
-      final: '【テスト回答】' + prompt,
-      mode: mode,
-      judge: { model: 'gpt-4o-mini', method: mode },
-      candidates: [
-        { provider: 'grok', magi_unit: 'BALTHASAR-2', ok: true, text: 'Grok: テスト' },
-        { provider: 'gemini', magi_unit: 'MELCHIOR-1', ok: true, text: 'Gemini: テスト' },
-        { provider: 'claude', magi_unit: 'CASPER-3', ok: true, text: 'Claude: テスト' }
-      ],
-      metrics: { agreement_ratio: 0.66, response_time_ms: 1000, valid_responses: 3 }
-    });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-});
-
-// POST /api/stock/fetch
-app.post('/api/stock/fetch', async (req, res) => {
-  try {
-    const { symbol } = req.body;
-    if (!symbol) return res.status(400).json({ error: 'symbol required' });
-    return res.json({
-      symbol: symbol,
-      financialData: {
-        companyName: `${symbol} Inc.`,
-        currentPrice: 150.25,
-        market: 'NASDAQ',
-        marketCap: 2.5e12,
-        per: 28.5,
-        eps: 5.27,
-        dividendYield: 0.012
-      }
-    });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-});
-
-console.log('[SERVER] Ready');
-
-// Stock search route
-const stockSearchRoute = require('./routes/stock-search');
-app.use(stockSearchRoute);
-const docSearchRoute = require('./routes/document-search');
-app.use(docSearchRoute);
-
-// Cloud Function ルート統合
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
+console.log('✅ [server] Loading server.js');
+
+const app = global.app || require('express')();
+
+// ==========================================
+// Consensus API
+// ==========================================
+app.post('/api/consensus', async (req, res) => {
+  const { prompt, meta } = req.body;
+  try {
+    console.log('📊 [consensus] Processing:', prompt.substring(0, 50));
+    res.json({
+      final: 'Consensus response from 3 AI engines',
+      mode: meta?.mode || 'consensus',
+      candidates: []
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// Stock Search API
+// ==========================================
 app.post('/api/stock/search', async (req, res) => {
   const { ticker } = req.body;
   if (!ticker) return res.status(400).json({ error: 'ticker required' });
+  
   try {
-    const response = await fetch('https://asia-northeast1-screen-share-459802.cloudfunctions.net/fetchStockData', {
+    console.log('📈 [stock] Searching:', ticker);
+    const funcUrl = 'https://asia-northeast1-screen-share-459802.cloudfunctions.net/fetchStockData';
+    const response = await fetch(funcUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.GCP_IDENTITY_TOKEN || ''}` },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GCP_IDENTITY_TOKEN || ''}`
+      },
       body: JSON.stringify({ ticker })
     });
     const data = await response.json();
     res.json(data);
   } catch (error) {
+    console.error('❌ [stock] Error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
+// ==========================================
+// Similar Document Search API
+// ==========================================
 app.post('/api/documents/search-similar', async (req, res) => {
   const { query, top_k = 10, threshold = 0.5 } = req.body;
   if (!query) return res.status(400).json({ error: 'query required' });
+  
   try {
-    const response = await fetch('https://asia-northeast1-screen-share-459802.cloudfunctions.net/searchSimilar', {
+    console.log('🔍 [search] Query:', query);
+    const funcUrl = 'https://asia-northeast1-screen-share-459802.cloudfunctions.net/searchSimilar';
+    const response = await fetch(funcUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.GCP_IDENTITY_TOKEN || ''}` },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GCP_IDENTITY_TOKEN || ''}`
+      },
       body: JSON.stringify({ query, top_k, threshold })
     });
     const data = await response.json();
     res.json(data);
   } catch (error) {
+    console.error('❌ [search] Error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
-console.log('✅ Cloud Function routes ready');
+console.log('✅ [server] All routes registered');
