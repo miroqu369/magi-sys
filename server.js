@@ -56,3 +56,7 @@ app.post('/api/stock/fetch', async (req, res) => {
 });
 
 console.log('[SERVER] Ready');
+
+// Stock search route
+const stockSearchRoute = require('./routes/stock-search');
+app.use(stockSearchRoute);
