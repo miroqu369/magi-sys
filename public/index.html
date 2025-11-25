@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAGI System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        /* ハンバーガーメニュー */
+        .hamburger {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            z-index: 1001;
+            transition: all 0.3s;
+        }
+        .hamburger:hover {
+            background: #f0f0f0;
+        }
+        .hamburger span {
+            width: 24px;
+            height: 3px;
+            background: #333;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+        .hamburger.active span:nth-child(1) {
+            transform: rotate(45deg) translate(7px, 7px);
+        }
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+        }
+        .hamburger.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -7px);
+        }
+        
+        /* サイドバー */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100vh;
+            background: white;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+            transition: left 0.3s;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .sidebar.active {
+            left: 0;
+        }
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .sidebar-header h2 {
+            font-size: 20px;
+            color: #333;
+        }
+        .sidebar-menu {
+            padding: 16px 0;
+        }
+        .menu-item {
+            padding: 14px 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .menu-item:hover {
+            background: #f5f5f5;
+        }
+        .menu-item.active {
+            background: #e3f2fd;
+            border-left-color: #007bff;
+            color: #007bff;
+            font-weight: 500;
+        }
+        
+        /* オーバーレイ */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            z-index: 999;
+        }
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* メインコンテンツ */
+        .main-content {
+            margin-left: 0;
+            padding: 80px 20px 20px 20px;
+            transition: margin-left 0.3s;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* カード */
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        /* フォーム要素 */
+        .input-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        /* ボタン */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        /* ローディング */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+        .loading.show {
+            display: block;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 結果表示 */
+        .result {
+            margin-top: 20px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+            display: none;
+        }
+        .result.show {
+            display: block;
+        }
+        
+        /* ページ切り替え */
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        
+        /* 設定アイコン */
+        .settings-icon {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 900;
+        }
+        .settings-icon:hover {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <!-- ハンバーガーメニュー -->
+    <div class="hamburger" onclick="toggleMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+    
+    <!-- オーバーレイ -->
+    <div class="overlay" onclick="toggleMenu()"></div>
+    
+    <!-- サイドバー -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>MAGI System</h2>
+        </div>
+        <div class="sidebar-menu">
+            <div class="menu-item active" onclick="showPage('question')">質問応答</div>
+            <div class="menu-item" onclick="showPage('stock')">株価分析</div>
+            <div class="menu-item" onclick="showPage('document')">決算書解析</div>
+            <div class="menu-item" onclick="showPage('history')">履歴</div>
+            <div class="menu-item" onclick="showPage('settings')">設定 ⚙</div>
+        </div>
+    </div>
+    
+    <!-- メインコンテンツ -->
+    <div class="main-content">
+        <div class="container">
+            <!-- 質問応答ページ -->
+            <div id="question" class="page active">
+                <div class="card">
+                    <h2>質問応答</h2>
+                    <div class="input-group">
+                        <label>モード</label>
+                        <select id="qMode">
+                            <option value="consensus">Consensus（合議）</option>
+                            <option value="integration" selected>Integration（統合）</option>
+                            <option value="synthesis">Synthesis（創発）</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>質問内容</label>
+                        <textarea id="qPrompt" placeholder="質問を入力してください..."></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="submitQuestion()">送信</button>
+                    <div class="loading" id="qLoading">
+                        <div class="spinner"></div>
+                        <p style="margin-top: 12px;">処理中...</p>
+                    </div>
+                    <div class="result" id="qResult"></div>
+                </div>
+            </div>
+            
+            <!-- 株価分析ページ -->
+            <div id="stock" class="page">
+                <div class="card">
+                    <h2>株価分析</h2>
+                    <div class="input-group">
+                        <label>銘柄シンボル</label>
+                        <input type="text" id="sSymbol" placeholder="例: AAPL, GOOGL, MSFT" value="AAPL">
+                    </div>
+                    <button class="btn btn-primary" onclick="analyzeStock()">分析開始</button>
+                    <div class="loading" id="sLoading">
+                        <div class="spinner"></div>
+                        <p style="margin-top: 12px;">分析中...</p>
+                    </div>
+                    <div class="result" id="sResult"></div>
+                </div>
+            </div>
+            
+            <!-- 決算書解析ページ -->
+            <div id="document" class="page">
+                <div class="card">
+                    <h2>決算書解析</h2>
+                    <div class="input-group">
+                        <label>銘柄シンボル</label>
+                        <input type="text" id="dSymbol" placeholder="例: AAPL" value="AAPL">
+                    </div>
+                    <div class="input-group">
+                        <label>決算書テキスト</label>
+                        <textarea id="dDocument" placeholder="決算書の内容を貼り付けてください..." style="min-height: 200px;"></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="analyzeDocument()">財務分析</button>
+                    <button class="btn btn-primary" onclick="analyzeSentiment()" style="margin-left: 10px;">センチメント分析</button>
+                    <div class="loading" id="dLoading">
+                        <div class="spinner"></div>
+                        <p style="margin-top: 12px;">解析中...</p>
+                    </div>
+                    <div class="result" id="dResult"></div>
+                </div>
+            </div>
+            
+            <!-- 履歴ページ -->
+            <div id="history" class="page">
+                <div class="card">
+                    <h2>履歴</h2>
+                    <div id="historyList">
+                        <p>まだ履歴がありません。</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 設定ページ -->
+            <div id="settings" class="page">
+                <div class="card">
+                    <h2>設定</h2>
+                    <div class="input-group">
+                        <label>MAGI-AC URL</label>
+                        <input type="text" id="magiAcUrl" value="https://magi-ac-dtrah63zyq-an.a.run.app" placeholder="MAGI-AC URL">
+                    </div>
+                    <button class="btn btn-primary" onclick="saveSettings()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let history = [];
+        let magiAcUrl = 'https://magi-ac-dtrah63zyq-an.a.run.app';
+        
+        // メニュー切り替え
+        function toggleMenu() {
+            document.querySelector('.hamburger').classList.toggle('active');
+            document.querySelector('.sidebar').classList.toggle('active');
+            document.querySelector('.overlay').classList.toggle('active');
+        }
+        
+        // ページ切り替え
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            event.target.classList.add('active');
+            toggleMenu();
+            
+            if (pageId === 'history') {
+                updateHistory();
+            }
+        }
+        
+        // 質問応答
+        async function submitQuestion() {
+            const prompt = document.getElementById('qPrompt').value;
+            const mode = document.getElementById('qMode').value;
+            
+            if (!prompt.trim()) {
+                alert('質問を入力してください');
+                return;
+            }
+            
+            const loading = document.getElementById('qLoading');
+            const result = document.getElementById('qResult');
+            
+            loading.classList.add('show');
+            result.classList.remove('show');
+            
+            try {
+                const response = await fetch('/api/consensus', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, meta: { mode } })
+                });
+                
+                const data = await response.json();
+                
+                result.innerHTML = `
+                    <h3>最終回答</h3>
+                    <p>${data.final}</p>
+                    <p style="margin-top: 16px; font-size: 12px; color: #666;">
+                        モード: ${mode} | 仕様書統合: ${data.spec_context_used ? '✓' : '✗'}
+                    </p>
+                `;
+                result.classList.add('show');
+                
+                history.push({
+                    type: '質問応答',
+                    prompt,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (error) {
+                alert('エラー: ' + error.message);
+            } finally {
+                loading.classList.remove('show');
+            }
+        }
+        
+        // 株価分析
+        async function analyzeStock() {
+            const symbol = document.getElementById('sSymbol').value;
+            
+            if (!symbol.trim()) {
+                alert('銘柄シンボルを入力してください');
+                return;
+            }
+            
+            const loading = document.getElementById('sLoading');
+            const result = document.getElementById('sResult');
+            
+            loading.classList.add('show');
+            result.classList.remove('show');
+            
+            try {
+                // TODO: Identity Tokenの取得が必要
+                const response = await fetch(`${magiAcUrl}/api/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol })
+                });
+                
+                const data = await response.json();
+                
+                result.innerHTML = `
+                    <h3>${data.symbol} - ${data.company}</h3>
+                    <p><strong>推奨:</strong> ${data.consensus?.recommendation || 'N/A'}</p>
+                    <p style="margin-top: 16px; font-size: 12px; color: #666;">
+                        仕様書統合: ${data.spec_context_used ? '✓' : '✗'}
+                    </p>
+                `;
+                result.classList.add('show');
+                
+                history.push({
+                    type: '株価分析',
+                    symbol,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (error) {
+                alert('エラー: ' + error.message);
+            } finally {
+                loading.classList.remove('show');
+            }
+        }
+        
+        // 決算書解析
+        async function analyzeDocument() {
+            const symbol = document.getElementById('dSymbol').value;
+            const document = document.getElementById('dDocument').value;
+            
+            if (!symbol.trim() || !document.trim()) {
+                alert('銘柄シンボルと決算書テキストを入力してください');
+                return;
+            }
+            
+            const loading = document.getElementById('dLoading');
+            const result = document.getElementById('dResult');
+            
+            loading.classList.add('show');
+            result.classList.remove('show');
+            
+            try {
+                const response = await fetch(`${magiAcUrl}/api/document/extract-financials`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol, document })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const f = data.financials;
+                    result.innerHTML = `
+                        <h3>${symbol} 財務分析結果</h3>
+                        <p><strong>売上高:</strong> ${f.revenue || 'N/A'}</p>
+                        <p><strong>営業利益:</strong> ${f.operating_income || 'N/A'}</p>
+                        <p><strong>純利益:</strong> ${f.net_income || 'N/A'}</p>
+                        <p><strong>EPS:</strong> ${f.earnings_per_share || 'N/A'}</p>
+                        <p><strong>総資産:</strong> ${f.total_assets || 'N/A'}</p>
+                    `;
+                } else {
+                    result.innerHTML = `<p>エラー: ${data.error}</p>`;
+                }
+                result.classList.add('show');
+                
+                history.push({
+                    type: '決算書解析',
+                    symbol,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (error) {
+                alert('エラー: ' + error.message);
+            } finally {
+                loading.classList.remove('show');
+            }
+        }
+        
+        // センチメント分析
+        async function analyzeSentiment() {
+            const symbol = document.getElementById('dSymbol').value;
+            const text = document.getElementById('dDocument').value;
+            
+            if (!symbol.trim() || !text.trim()) {
+                alert('銘柄シンボルとテキストを入力してください');
+                return;
+            }
+            
+            const loading = document.getElementById('dLoading');
+            const result = document.getElementById('dResult');
+            
+            loading.classList.add('show');
+            result.classList.remove('show');
+            
+            try {
+                const response = await fetch(`${magiAcUrl}/api/document/sentiment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol, text })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const s = data.sentiment;
+                    result.innerHTML = `
+                        <h3>${symbol} センチメント分析</h3>
+                        <p><strong>センチメント:</strong> ${s.sentiment}</p>
+                        <p><strong>スコア:</strong> ${s.score}</p>
+                        <p><strong>影響度:</strong> ${s.impact}</p>
+                        <p><strong>要約:</strong> ${s.summary}</p>
+                    `;
+                } else {
+                    result.innerHTML = `<p>エラー: ${data.error}</p>`;
+                }
+                result.classList.add('show');
+            } catch (error) {
+                alert('エラー: ' + error.message);
+            } finally {
+                loading.classList.remove('show');
+            }
+        }
+        
+        // 履歴更新
+        function updateHistory() {
+            const list = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                list.innerHTML = '<p>まだ履歴がありません。</p>';
+                return;
+            }
+            
+            list.innerHTML = history.map((h, i) => `
+                <div style="padding: 12px; background: #f8f9fa; border-radius: 4px; margin-bottom: 8px;">
+                    <strong>${h.type}</strong> - ${new Date(h.timestamp).toLocaleString('ja-JP')}
+                    ${h.prompt ? `<br><small>${h.prompt.substring(0, 100)}...</small>` : ''}
+                    ${h.symbol ? `<br><small>銘柄: ${h.symbol}</small>` : ''}
+                </div>
+            `).reverse().join('');
+        }
+        
+        // 設定保存
+        function saveSettings() {
+            magiAcUrl = document.getElementById('magiAcUrl').value;
+            alert('設定を保存しました');
+        }
+    </script>
+</body>
+</html>

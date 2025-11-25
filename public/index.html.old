@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>MAGI</title>
+<style>
+body{background:#000;color:#0f0;padding:20px}
+.active{background:#ff0}
+.result{border:1px solid #ff0;padding:20px}
+</style>
+</head>
+<body>
+<h1>MAGI SYSTEM</h1>
+<button class="active" onclick="m='consensus';this.className='active'">CONSENSUS</button>
+<button onclick="m='integration';this.className='active'">INTEGRATION</button>
+<button onclick="m='synthesis';this.className='active'">SYNTHESIS</button>
+<br><br>
+<textarea id="q" rows="3" style="width:80%"></textarea><br>
+<button onclick="send()">分析</button>
+<div id="r"></div>
+<script>
+let m='consensus';
+function send(){
+fetch('/api/consensus',{method:'POST',headers:{'Content-Type':'application/json'},
+body:JSON.stringify({prompt:document.getElementById('q').value,meta:{mode:m}})})
+.then(r=>r.json()).then(d=>{document.getElementById('r').innerHTML='<div class="result">'+d.final+'</div>'});
+}
+</script>
+</body></html>

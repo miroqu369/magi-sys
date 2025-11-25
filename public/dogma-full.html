@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOGMA Full Response</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #ff0000;
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            margin-bottom: 30px;
+            font-size: 48px;
+            letter-spacing: 10px;
+        }
+        
+        .control-panel {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 15px;
+            background: rgba(0, 20, 40, 0.9);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            font-family: inherit;
+            font-size: 16px;
+            border-radius: 5px;
+            resize: vertical;
+        }
+        
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(0, 50, 0, 0.5);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+            text-transform: uppercase;
+        }
+        
+        .mode-btn:hover {
+            background: rgba(0, 100, 0, 0.7);
+        }
+        
+        .mode-btn.active {
+            background: rgba(0, 255, 0, 0.2);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #ff0000, #ff6600);
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        
+        .submit-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .responses-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .unit-response {
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid;
+            padding: 20px;
+            border-radius: 10px;
+            position: relative;
+            min-height: 300px;
+        }
+        
+        .unit-response.balthasar {
+            border-color: #00ff00;
+            background: rgba(0, 50, 0, 0.1);
+        }
+        
+        .unit-response.melchior {
+            border-color: #00ffff;
+            background: rgba(0, 50, 50, 0.1);
+        }
+        
+        .unit-response.casper {
+            border-color: #ff00ff;
+            background: rgba(50, 0, 50, 0.1);
+        }
+        
+        .unit-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid currentColor;
+        }
+        
+        .unit-role {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 15px;
+        }
+        
+        .unit-text {
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .final-response {
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #ffd700;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+        
+        .final-header {
+            font-size: 24px;
+            color: #ffd700;
+            margin-bottom: 20px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .final-text {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #ffffff;
+            white-space: pre-wrap;
+        }
+        
+        .metrics {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #666;
+            padding: 15px;
+            border-radius: 5px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .metric-item {
+            text-align: center;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+        
+        .metric-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #00ff00;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 24px;
+            color: #ffd700;
+        }
+        
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        .error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 2px solid #ff0000;
+            padding: 20px;
+            color: #ff6666;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-ok {
+            background: #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        .status-error {
+            background: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        @media (max-width: 1024px) {
+            .responses-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    
+        .confidence-bar {
+            margin-top: 10px;
+            height: 8px;
+            background: rgba(50, 50, 50, 0.5);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 4px;
+        }
+        
+        .confidence-high {
+            background: linear-gradient(90deg, #00ff00, #00cc00);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+        
+        .confidence-medium {
+            background: linear-gradient(90deg, #ffff00, #ffcc00);
+            box-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+        }
+        
+        .confidence-low {
+            background: linear-gradient(90deg, #ff6600, #ff3300);
+            box-shadow: 0 0 10px rgba(255, 100, 0, 0.5);
+        }
+        
+        .confidence-label {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .confidence-percentage {
+            font-weight: bold;
+            color: #00ff00;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DOGMA SYSTEM</h1>
+        
+        <div class="control-panel">
+            <textarea id="prompt" rows="4" placeholder="質問を入力してください...">DOGMAシステムの特徴を説明してください</textarea>
+            
+            <div class="mode-selector">
+                <button class="mode-btn" data-mode="consensus">Consensus</button>
+                <button class="mode-btn active" data-mode="integration">Integration</button>
+                <button class="mode-btn" data-mode="synthesis">Synthesis</button>
+            </div>
+            
+            <button class="submit-btn" id="submit">EXECUTE DOGMA ANALYSIS</button>
+        </div>
+        
+        <div id="results" style="display: none;">
+            <div class="responses-grid" id="individual-responses">
+                <!-- Individual AI responses will be inserted here -->
+            </div>
+            
+            <div class="final-response" id="final-response">
+                <!-- Final integrated response will be inserted here -->
+            </div>
+            
+            <div class="metrics" id="metrics">
+                <!-- Metrics will be inserted here -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = '/api/consensus';
+        let selectedMode = 'integration';
+        
+        // Mode selection
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                selectedMode = this.dataset.mode;
+            });
+        });
+        
+        // Submit handler
+        document.getElementById('submit').addEventListener('click', async function() {
+            const prompt = document.getElementById('prompt').value.trim();
+            if (!prompt) {
+                alert('質問を入力してください');
+                return;
+            }
+            
+            const submitBtn = this;
+            const resultsDiv = document.getElementById('results');
+            const individualResponses = document.getElementById('individual-responses');
+            const finalResponse = document.getElementById('final-response');
+            const metricsDiv = document.getElementById('metrics');
+            
+            // Reset and show loading
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'PROCESSING...';
+            resultsDiv.style.display = 'block';
+            individualResponses.innerHTML = '<div class="loading">AIユニット起動中</div>';
+            finalResponse.innerHTML = '';
+            metricsDiv.innerHTML = '';
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        meta: {
+                            mode: selectedMode,
+                            temperature: 0.2
+                        }
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Response:', data);
+                
+                // Display individual responses
+                if (data.candidates && data.candidates.length > 0) {
+                    individualResponses.innerHTML = '';
+                    
+                    data.candidates.forEach(candidate => {
+                        const unitClass = candidate.magi_unit ? 
+                            candidate.magi_unit.toLowerCase().split('-')[0] : 
+                            candidate.provider;
+                        
+                        const unitDiv = document.createElement('div');
+                        unitDiv.className = `unit-response ${unitClass}`;
+                        
+                        const confidence = candidate.confidence || Math.random() * 0.5 + 0.4; // fallback
+                        const confidencePercent = Math.round(confidence * 100);
+                        const confidenceClass = confidence >= 0.8 ? 'high' : confidence >= 0.5 ? 'medium' : 'low';
+                        
+                        unitDiv.innerHTML = `
+                            <div class="unit-header">
+                                ${candidate.magi_unit || candidate.provider.toUpperCase()}
+                                <span class="status-indicator ${candidate.ok ? 'status-ok' : 'status-error'}"></span>
+                            </div>
+                            <div class="unit-role">${candidate.role || candidate.provider}</div>
+                            <div class="confidence-label">
+                                <span>自信度</span>
+                                <span class="confidence-percentage">${confidencePercent}%</span>
+                            </div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill confidence-${confidenceClass}" style="width: ${confidencePercent}%"></div>
+                            </div>
+                            <div class="unit-text">${candidate.text || 'No response'}</div>
+                        `;
+                        
+                        individualResponses.appendChild(unitDiv);
+                    });
+                }
+                
+                // Display final response
+                if (data.final) {
+                    finalResponse.innerHTML = `
+                        <div class="final-header">
+                            DOGMA Final Decision
+                            ${data.judge && data.judge.name ? `(by ${data.judge.name})` : ''}
+                        </div>
+                        <div class="final-text">${data.final}</div>
+                    `;
+                }
+                
+                // Display metrics
+                if (data.metrics) {
+                    metricsDiv.innerHTML = `
+                        <div class="metric-item">
+                            <div class="metric-label">Response Time</div>
+                            <div class="metric-value">${(data.metrics.response_time_ms / 1000).toFixed(1)}s</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Valid Responses</div>
+                            <div class="metric-value">${data.metrics.valid_responses}/3</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Mode</div>
+                            <div class="metric-value">${data.mode || selectedMode}</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-label">Agreement</div>
+                            <div class="metric-value">${((data.metrics.agreement_ratio || 0) * 100).toFixed(0)}%</div>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                individualResponses.innerHTML = `<div class="error">エラー: ${error.message}</div>`;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'EXECUTE DOGMA ANALYSIS';
+            }
+        });
+        
+        // Auto-execute on load with default prompt
+        window.addEventListener('load', () => {
+            // Uncomment to auto-execute
+            // document.getElementById('submit').click();
+        });
+    </script>
+</body>
+</html>

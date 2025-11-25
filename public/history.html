@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAGI History</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Courier New', monospace;
+      background: #000;
+      color: #0f0;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    header {
+      border: 2px solid #0f0;
+      padding: 20px;
+      margin-bottom: 20px;
+      background: rgba(0, 255, 0, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    h1 {
+      font-size: 1.8em;
+      letter-spacing: 3px;
+      text-shadow: 0 0 10px #0f0;
+    }
+    
+    nav a {
+      color: #0f0;
+      text-decoration: none;
+      margin: 0 10px;
+      padding: 5px 10px;
+      border: 1px solid #0f0;
+      transition: all 0.3s;
+    }
+    
+    nav a:hover {
+      background: rgba(0, 255, 0, 0.2);
+    }
+    
+    .controls {
+      border: 2px solid #0f0;
+      padding: 15px;
+      margin-bottom: 20px;
+      background: rgba(0, 255, 0, 0.02);
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .filter-btn {
+      padding: 8px 15px;
+      background: transparent;
+      border: 1px solid #0f0;
+      color: #0f0;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .filter-btn:hover, .filter-btn.active {
+      background: rgba(0, 255, 0, 0.2);
+    }
+    
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      padding: 8px;
+      background: #000;
+      border: 1px solid #0f0;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .history-list {
+      border: 2px solid #0f0;
+      background: rgba(0, 255, 0, 0.02);
+    }
+    
+    .history-item {
+      border-bottom: 1px solid rgba(0, 255, 0, 0.3);
+      padding: 15px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .history-item:hover {
+      background: rgba(0, 255, 0, 0.05);
+    }
+    
+    .history-item:last-child {
+      border-bottom: none;
+    }
+    
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    
+    .item-timestamp {
+      opacity: 0.7;
+      font-size: 0.9em;
+    }
+    
+    .item-query {
+      margin-bottom: 10px;
+      padding: 10px;
+      background: rgba(0, 255, 0, 0.05);
+      border-left: 3px solid #0f0;
+    }
+    
+    .item-meta {
+      display: flex;
+      gap: 15px;
+      font-size: 0.9em;
+      opacity: 0.8;
+    }
+    
+    .item-details {
+      margin-top: 15px;
+      padding: 15px;
+      background: rgba(0, 255, 0, 0.03);
+      border: 1px solid rgba(0, 255, 0, 0.3);
+      display: none;
+    }
+    
+    .item-details.show {
+      display: block;
+    }
+    
+    .detail-section {
+      margin-bottom: 15px;
+    }
+    
+    .detail-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #0f0;
+    }
+    
+    .detail-content {
+      padding: 10px;
+      background: rgba(0, 255, 0, 0.02);
+      border-left: 2px solid #0f0;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+    
+    .export-btn {
+      padding: 10px 20px;
+      background: transparent;
+      border: 2px solid #0f0;
+      color: #0f0;
+      cursor: pointer;
+      font-size: 1em;
+      letter-spacing: 2px;
+    }
+    
+    .export-btn:hover {
+      background: rgba(0, 255, 0, 0.2);
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>MAGI HISTORY</h1>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/admin.html">Admin</a>
+        <a href="/compare.html">Compare</a>
+        <a href="/history.html">History</a>
+        <a href="/debug.html">Debug</a>
+      </nav>
+    </header>
+    
+    <div class="controls">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="integration">Integration</button>
+      <button class="filter-btn" data-filter="consensus">Consensus</button>
+      <button class="filter-btn" data-filter="synthesis">Synthesis</button>
+      <input type="text" class="search-input" placeholder="Search queries..." id="searchInput">
+      <button class="export-btn" onclick="exportHistory()">EXPORT</button>
+    </div>
+    
+    <div class="history-list" id="historyList">
+      <!-- History items will be inserted here -->
+    </div>
+  </div>
+  
+  <script>
+    // LocalStorage-based history (for demo)
+    let history = JSON.parse(localStorage.getItem('magiHistory') || '[]');
+    
+    // Generate sample data if empty
+    if (history.length === 0) {
+      history = [
+        {
+          id: Date.now() - 3600000,
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+          query: "AIの未来について教えて",
+          mode: "integration",
+          responseTime: 2340,
+          validResponses: 3,
+          finalAnswer: "AIの未来は...",
+          candidates: [
+            { provider: "grok", text: "Grokの回答..." },
+            { provider: "gemini", text: "Geminiの回答..." },
+            { provider: "claude", text: "Claudeの回答..." }
+          ]
+        },
+        {
+          id: Date.now() - 7200000,
+          timestamp: new Date(Date.now() - 7200000).toISOString(),
+          query: "1+1は？",
+          mode: "consensus",
+          responseTime: 1200,
+          validResponses: 3,
+          finalAnswer: "2",
+          candidates: [
+            { provider: "grok", text: "2です" },
+            { provider: "gemini", text: "答えは2" },
+            { provider: "claude", text: "1+1=2" }
+          ]
+        }
+      ];
+      localStorage.setItem('magiHistory', JSON.stringify(history));
+    }
+    
+    function renderHistory(items = history) {
+      const listEl = document.getElementById('historyList');
+      
+      if (items.length === 0) {
+        listEl.innerHTML = '<div class="empty-state">No history found</div>';
+        return;
+      }
+      
+      listEl.innerHTML = items.map(item => `
+        <div class="history-item" onclick="toggleDetails(${item.id})">
+          <div class="item-header">
+            <span>Query #${item.id}</span>
+            <span class="item-timestamp">${new Date(item.timestamp).toLocaleString()}</span>
+          </div>
+          <div class="item-query">${item.query}</div>
+          <div class="item-meta">
+            <span>Mode: ${item.mode.toUpperCase()}</span>
+            <span>Time: ${item.responseTime}ms</span>
+            <span>Valid: ${item.validResponses}/3</span>
+          </div>
+          <div class="item-details" id="details-${item.id}">
+            <div class="detail-section">
+              <div class="detail-title">ISABELLE RESPONSE</div>
+              <div class="detail-content">${item.finalAnswer}</div>
+            </div>
+            ${item.candidates.map(c => `
+              <div class="detail-section">
+                <div class="detail-title">${c.provider.toUpperCase()}</div>
+                <div class="detail-content">${c.text}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    function toggleDetails(id) {
+      const el = document.getElementById('details-' + id);
+      el.classList.toggle('show');
+    }
+    
+    // Filter buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        const filter = this.dataset.filter;
+        const filtered = filter === 'all' 
+          ? history 
+          : history.filter(h => h.mode === filter);
+        renderHistory(filtered);
+      });
+    });
+    
+    // Search
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+      const term = e.target.value.toLowerCase();
+      const filtered = history.filter(h => 
+        h.query.toLowerCase().includes(term) ||
+        h.finalAnswer.toLowerCase().includes(term)
+      );
+      renderHistory(filtered);
+    });
+    
+    function exportHistory() {
+      const dataStr = JSON.stringify(history, null, 2);
+      const dataBlob = new Blob([dataStr], {type: 'application/json'});
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `magi-history-${Date.now()}.json`;
+      link.click();
+    }
+    
+    // Save to history when query is made (called from index.html)
+    window.saveToHistory = function(data) {
+      history.unshift({
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        query: data.query,
+        mode: data.mode,
+        responseTime: data.metrics?.response_time_ms || 0,
+        validResponses: data.metrics?.valid_responses || 0,
+        finalAnswer: data.final_answer,
+        candidates: data.candidates
+      });
+      
+      // Keep only last 100
+      if (history.length > 100) history = history.slice(0, 100);
+      
+      localStorage.setItem('magiHistory', JSON.stringify(history));
+    };
+    
+    renderHistory();
+  </script>
+</body>
+</html>

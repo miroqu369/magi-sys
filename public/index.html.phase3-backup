@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAGI Core</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .nav {
+            display: flex;
+            gap: 10px;
+        }
+        .nav-btn {
+            padding: 8px 16px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .nav-btn:hover {
+            background: #e0e0e0;
+        }
+        .nav-btn.active {
+            background: #007bff;
+            color: white;
+        }
+        .card {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 100px;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .submit-btn:hover {
+            background: #0056b3;
+        }
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+            display: none;
+        }
+        .result.show {
+            display: block;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        .loading.show {
+            display: block;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .metric {
+            display: inline-block;
+            margin-right: 20px;
+            padding: 8px 12px;
+            background: #e9ecef;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        .candidates {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .candidate-card {
+            padding: 16px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .candidate-header {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #007bff;
+        }
+        .final-answer {
+            padding: 16px;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>MAGI Core</h1>
+            <div class="nav">
+                <button class="nav-btn active" onclick="showPage('main')">質問</button>
+                <button class="nav-btn" onclick="showPage('settings')">設定</button>
+                <button class="nav-btn" onclick="showPage('dashboard')">ダッシュボード</button>
+            </div>
+        </div>
+
+        <!-- メインページ -->
+        <div id="main" class="page active">
+            <div class="card">
+                <h2>質問を入力</h2>
+                <div class="input-group">
+                    <label>モード</label>
+                    <select id="mode">
+                        <option value="consensus">Consensus（合議）- コスト重視</option>
+                        <option value="integration" selected>Integration（統合）- 品質重視</option>
+                        <option value="synthesis">Synthesis（創発）- クリエイティブ</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>質問内容</label>
+                    <textarea id="prompt" placeholder="ここに質問を入力してください..."></textarea>
+                </div>
+                <button class="submit-btn" onclick="submitQuestion()">送信</button>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 12px;">処理中...</p>
+                </div>
+
+                <div class="result" id="result">
+                    <h3>結果</h3>
+                    <div id="resultContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 設定ページ -->
+        <div id="settings" class="page">
+            <div class="card">
+                <h2>設定</h2>
+                <div class="input-group">
+                    <label>Temperature (0.0-1.0)</label>
+                    <input type="number" id="temperature" value="0.2" min="0" max="1" step="0.1" style="width: 100%; padding: 10px;">
+                </div>
+                <div class="input-group">
+                    <label>タイムアウト (ms)</label>
+                    <input type="number" id="timeout" value="25000" min="5000" max="60000" step="1000" style="width: 100%; padding: 10px;">
+                </div>
+                <button class="submit-btn" onclick="saveSettings()">保存</button>
+            </div>
+        </div>
+
+        <!-- ダッシュボード -->
+        <div id="dashboard" class="page">
+            <div class="card">
+                <h2>パフォーマンスダッシュボード</h2>
+                <div id="metrics"></div>
+                <canvas id="chart" width="800" height="400" style="margin-top: 20px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let history = [];
+
+        function showPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(page).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (page === 'dashboard') {
+                updateDashboard();
+            }
+        }
+
+        async function submitQuestion() {
+            const prompt = document.getElementById('prompt').value;
+            const mode = document.getElementById('mode').value;
+            const temperature = parseFloat(document.getElementById('temperature').value);
+            const timeout = parseInt(document.getElementById('timeout').value);
+
+            if (!prompt.trim()) {
+                alert('質問を入力してください');
+                return;
+            }
+
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const resultContent = document.getElementById('resultContent');
+            const btn = document.querySelector('.submit-btn');
+
+            loading.classList.add('show');
+            result.classList.remove('show');
+            btn.disabled = true;
+
+            const startTime = Date.now();
+
+            try {
+                const response = await fetch('/api/consensus', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt,
+                        meta: { mode, temperature, timeout_ms: timeout }
+                    })
+                });
+
+                const data = await response.json();
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+
+                // 履歴に追加
+                history.push({
+                    timestamp: new Date(),
+                    mode,
+                    responseTime,
+                    success: true
+                });
+
+                // 結果表示
+                resultContent.innerHTML = `
+                    <div class="final-answer">
+                        <h4>最終回答 (${data.judge?.method || mode})</h4>
+                        <p>${data.final}</p>
+                    </div>
+                    <div class="metric">モード: ${mode}</div>
+                    <div class="metric">応答時間: ${responseTime}ms</div>
+                    <div class="metric">一致度: ${(data.metrics?.agreement_ratio * 100).toFixed(0)}%</div>
+                    <h4 style="margin-top: 16px;">各AIの回答</h4>
+                    <div class="candidates">
+                        ${data.candidates.map(c => `
+                            <div class="candidate-card">
+                                <div class="candidate-header">${c.provider.toUpperCase()}</div>
+                                <small>${c.magi_unit} - ${c.role}</small>
+                                <p style="margin-top: 8px;">${c.text.substring(0, 200)}...</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+
+                result.classList.add('show');
+            } catch (error) {
+                alert('エラーが発生しました: ' + error.message);
+                history.push({
+                    timestamp: new Date(),
+                    mode,
+                    responseTime: Date.now() - startTime,
+                    success: false
+                });
+            } finally {
+                loading.classList.remove('show');
+                btn.disabled = false;
+            }
+        }
+
+        function saveSettings() {
+            alert('設定を保存しました');
+        }
+
+        function updateDashboard() {
+            const metrics = document.getElementById('metrics');
+            
+            if (history.length === 0) {
+                metrics.innerHTML = '<p>まだデータがありません。質問を送信してください。</p>';
+                return;
+            }
+
+            const avgTime = history.reduce((sum, h) => sum + h.responseTime, 0) / history.length;
+            const successRate = (history.filter(h => h.success).length / history.length * 100).toFixed(1);
+
+            metrics.innerHTML = `
+                <div class="metric">総リクエスト数: ${history.length}</div>
+                <div class="metric">平均応答時間: ${avgTime.toFixed(0)}ms</div>
+                <div class="metric">成功率: ${successRate}%</div>
+            `;
+
+            // 簡易チャート描画
+            drawChart();
+        }
+
+        function drawChart() {
+            const canvas = document.getElementById('chart');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (history.length === 0) return;
+
+            const maxTime = Math.max(...history.map(h => h.responseTime));
+            const barWidth = canvas.width / history.length;
+
+            history.forEach((h, i) => {
+                const barHeight = (h.responseTime / maxTime) * (canvas.height - 50);
+                const x = i * barWidth;
+                const y = canvas.height - barHeight;
+
+                ctx.fillStyle = h.success ? '#007bff' : '#dc3545';
+                ctx.fillRect(x, y, barWidth - 2, barHeight);
+
+                // ラベル
+                ctx.fillStyle = '#333';
+                ctx.font = '10px sans-serif';
+                ctx.fillText(`${h.responseTime}ms`, x + 2, y - 5);
+            });
+        }
+    </script>
+</body>
+</html>
