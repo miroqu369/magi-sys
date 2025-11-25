@@ -6,163 +6,181 @@
     <title>MAGI System v4.0</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, sans-serif; background: #f5f5f5; }
-        .container { display: flex; height: 100vh; }
-        .sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; }
-        .menu-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-        .menu-item { padding: 12px; margin: 8px 0; background: #34495e; border-radius: 4px; cursor: pointer; }
-        .menu-item:hover { background: #3498db; }
-        .menu-item.active { background: #3498db; }
-        .content { flex: 1; padding: 30px; overflow-y: auto; background: white; }
-        .page { display: none; }
-        .page.active { display: block; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        button { padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #2980b9; }
-        .result { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 4px; }
+        body { font-family: sans-serif; background: linear-gradient(135deg, #667eea, #764ba2); min-height: 100vh; }
+        .header { background: rgba(0,0,0,0.8); color: white; padding: 15px 20px; display: flex; justify-content: space-between; z-index: 100; position: sticky; top: 0; }
+        .menu-toggle { background: none; border: none; color: white; font-size: 28px; cursor: pointer; }
+        .menu { position: fixed; left: -250px; top: 0; width: 250px; height: 100vh; background: rgba(0,0,0,0.95); padding-top: 60px; transition: left 0.3s; z-index: 99; }
+        .menu.active { left: 0; }
+        .menu a { display: block; color: white; padding: 15px 20px; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .menu a:hover { background: rgba(255,255,255,0.1); }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; z-index: 98; }
+        .overlay.active { display: block; }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .view { display: none; }
+        .view.active { display: block; }
+        input, textarea, select, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
+        button { background: linear-gradient(135deg, #667eea, #764ba2); color: white; cursor: pointer; }
+        button:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body>
+    <div class="header">
+        <div style="font-size: 18px; font-weight: bold;">≡ MAGI System v4.0</div>
+        <button class="menu-toggle" id="menuToggle">≡</button>
+    </div>
+
+    <nav class="menu" id="menu">
+        <a href="#" data-view="consensus" class="menu-item">質問応答</a>
+        <a href="#" data-view="history" class="menu-item">履歴</a>
+        <a href="#" data-view="document" class="menu-item">文書解析</a>
+        <a href="#" data-view="comparison" class="menu-item">銘柄比較</a>
+        <a href="#" data-view="research" class="menu-item">株式調査</a>
+        <a href="#" data-view="settings" class="menu-item">⚙ 設定</a>
+    </nav>
+
+    <div class="overlay" id="overlay"></div>
+
     <div class="container">
-        <!-- サイドバー -->
-        <div class="sidebar">
-            <div class="menu-title">≡ MAGI v4.0</div>
-            <div class="menu-item active" onclick="switchPage('qa')">質問応答</div>
-            <div class="menu-item" onclick="switchPage('analysis')">銘柄分析</div>
-            <div class="menu-item" onclick="switchPage('document')">文書解析</div>
-            <div class="menu-item" onclick="switchPage('history')">履歴</div>
-            <div class="menu-item" onclick="switchPage('settings')">設定</div>
+        <div id="consensus" class="view active">
+            <div class="card">
+                <h2>質問応答（5 AI 合議）</h2>
+                <textarea id="prompt" placeholder="質問を入力...例：AIの未来について" rows="6"></textarea>
+                <select id="mode">
+                    <option value="consensus">合議モード</option>
+                    <option value="integration">統合モード</option>
+                    <option value="synthesis">創発モード</option>
+                </select>
+                <button onclick="askConsensus()">分析を開始</button>
+                <div id="consensusResult" style="margin-top: 20px;"></div>
+            </div>
         </div>
 
-        <!-- コンテンツ -->
-        <div class="content">
-            <!-- 質問応答 -->
-            <div class="page active" id="qa">
-                <h2>質問応答</h2>
-                <div class="form-group">
-                    <label>質問</label>
-                    <textarea id="question" placeholder="質問を入力..." rows="4"></textarea>
-                </div>
-                <button onclick="submitQuestion()">送信</button>
-                <div class="result" id="qaResult"></div>
-            </div>
+        <div id="history" class="view">
+            <div class="card"><h2>履歴</h2><p>過去の質問と回答を表示します</p></div>
+        </div>
 
-            <!-- 銘柄分析 -->
-            <div class="page" id="analysis">
-                <h2>銘柄分析</h2>
-                <div class="form-group">
-                    <label>シンボル</label>
-                    <input type="text" id="symbol" placeholder="例: AAPL" value="AAPL">
-                </div>
-                <button onclick="analyzeStock()">分析</button>
-                <div class="result" id="analysisResult"></div>
-            </div>
-
-            <!-- 文書解析 -->
-            <div class="page" id="document">
+        <div id="document" class="view">
+            <div class="card">
                 <h2>文書解析</h2>
-                <div class="form-group">
-                    <label>テキスト</label>
-                    <textarea id="docText" placeholder="テキストを入力..." rows="6"></textarea>
-                </div>
-                <button onclick="analyzeSentiment()">分析</button>
-                <div class="result" id="docResult"></div>
+                <input type="file" id="documentFile" accept=".pdf,.txt">
+                <input type="text" id="documentSymbol" placeholder="銘柄シンボル（例：AAPL）">
+                <button onclick="analyzeDocument()">解析開始</button>
+                <div id="documentResult" style="margin-top: 20px;"></div>
             </div>
+        </div>
 
-            <!-- 履歴 -->
-            <div class="page" id="history">
-                <h2>履歴</h2>
-                <div id="historyList"></div>
+        <div id="comparison" class="view">
+            <div class="card">
+                <h2>銘柄比較</h2>
+                <input type="text" id="symbol1" placeholder="第1銘柄（例：AAPL）">
+                <input type="text" id="symbol2" placeholder="第2銘柄（例：GOOGL）">
+                <button onclick="compareSymbols()">比較分析</button>
+                <div id="comparisonResult" style="margin-top: 20px;"></div>
             </div>
+        </div>
 
-            <!-- 設定 -->
-            <div class="page" id="settings">
-                <h2>設定</h2>
-                <div class="form-group">
-                    <label>API URL</label>
-                    <input type="text" id="apiUrl" value="http://localhost:8888">
-                </div>
-                <button onclick="saveSettings()">保存</button>
+        <div id="research" class="view">
+            <div class="card">
+                <h2>株式調査</h2>
+                <input type="text" id="researchSymbol" placeholder="銘柄シンボル（例：AAPL）">
+                <button onclick="researchStock()">調査開始</button>
+                <div id="researchResult" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+
+        <div id="settings" class="view">
+            <div class="card">
+                <h2>⚙ 設定</h2>
+                <label><input type="checkbox" id="darkMode"> ダークモード</label>
+                <label><input type="checkbox" id="autoSave"> 自動保存</label>
+                <button onclick="saveSettings()">設定を保存</button>
             </div>
         </div>
     </div>
 
     <script>
-        const history = [];
-        let apiUrl = 'http://localhost:8888';
+        const menu = document.getElementById('menu');
+        const overlay = document.getElementById('overlay');
+        const menuToggle = document.getElementById('menuToggle');
+        const menuItems = document.querySelectorAll('.menu-item');
 
-        // ページ切り替え
-        function switchPage(pageId) {
-            document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
-            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-            
-            event.target.classList.add('active');
-            document.getElementById(pageId).classList.add('active');
-            updateHistory();
+        menuToggle.addEventListener('click', () => {
+            menu.classList.toggle('active');
+            overlay.classList.toggle('active');
+        });
+
+        overlay.addEventListener('click', () => {
+            menu.classList.remove('active');
+            overlay.classList.remove('active');
+        });
+
+        menuItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const viewId = item.dataset.view;
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById(viewId).classList.add('active');
+                menu.classList.remove('active');
+                overlay.classList.remove('active');
+            });
+        });
+
+        async function askConsensus() {
+            const prompt = document.getElementById('prompt').value;
+            if (!prompt) { alert('質問を入力してください'); return; }
+            try {
+                const response = await fetch('/api/consensus', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, meta: { mode: 'consensus' } })
+                });
+                const data = await response.json();
+                document.getElementById('consensusResult').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('consensusResult').innerHTML = '<p style="color:red;">エラー: ' + error.message + '</p>';
+            }
         }
 
-        // 銘柄分析
-        async function analyzeStock() {
-            const symbol = document.getElementById('symbol').value;
-            if (!symbol) { alert('シンボルを入力してください'); return; }
-            
-            const result = document.getElementById('analysisResult');
-            result.innerHTML = '処理中...';
-            
+        async function analyzeDocument() {
+            alert('文書解析機能の実装予定');
+        }
+
+        async function compareSymbols() {
+            const s1 = document.getElementById('symbol1').value;
+            const s2 = document.getElementById('symbol2').value;
+            if (!s1 || !s2) { alert('2つの銘柄を入力してください'); return; }
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbols: [s1, s2] })
+                });
+                const data = await response.json();
+                document.getElementById('comparisonResult').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('comparisonResult').innerHTML = '<p style="color:red;">エラー: ' + error.message + '</p>';
+            }
+        }
+
+        async function researchStock() {
+            const symbol = document.getElementById('researchSymbol').value;
+            if (!symbol) { alert('銘柄を入力してください'); return; }
             try {
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ symbol })
                 });
-                const json = await response.json();
-                
-                if (json.success) {
-                    const d = json.data;
-                    result.innerHTML = `
-                        <h3>${d.symbol} 分析結果</h3>
-                        <p><strong>企業:</strong> ${d.company}</p>
-                        <p><strong>推奨:</strong> ${d.consensus.recommendation}</p>
-                        <p><strong>信頼度:</strong> ${(d.consensus.confidence * 100).toFixed(1)}%</p>
-                    `;
-                    history.push({ type: '銘柄分析', symbol, timestamp: new Date() });
-                } else {
-                    result.innerHTML = `<p>エラー: ${json.error}</p>`;
-                }
+                const data = await response.json();
+                document.getElementById('researchResult').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
             } catch (error) {
-                result.innerHTML = `<p>エラー: ${error.message}</p>`;
+                document.getElementById('researchResult').innerHTML = '<p style="color:red;">エラー: ' + error.message + '</p>';
             }
         }
 
-        // 履歴更新
-        function updateHistory() {
-            const list = document.getElementById('historyList');
-            if (history.length === 0) {
-                list.innerHTML = '<p>まだ履歴がありません。</p>';
-                return;
-            }
-            list.innerHTML = history.map(h => `
-                <div style="padding: 12px; background: #f8f9fa; border-radius: 4px; margin-bottom: 8px;">
-                    <strong>${h.type}</strong> - ${new Date(h.timestamp).toLocaleString('ja-JP')}
-                    ${h.symbol ? `<br><small>銘柄: ${h.symbol}</small>` : ''}
-                </div>
-            `).reverse().join('');
-        }
-
-        // 設定保存
         function saveSettings() {
-            apiUrl = document.getElementById('apiUrl').value;
             alert('設定を保存しました');
-        }
-
-        function submitQuestion() {
-            alert('質問応答機能は準備中です');
-        }
-
-        function analyzeSentiment() {
-            alert('文書解析機能は準備中です');
         }
     </script>
 </body>
