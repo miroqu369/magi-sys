@@ -9,6 +9,7 @@ global.app = express();
 app.use(express.json({ limit: '1mb' }));
 
 // ========== 仕様書をグローバルにキャッシュ ==========
+app.use(express.static('public'));
 global.specifications = null;
 
 // ========== 2) Data Manager初期化 ==========

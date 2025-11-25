@@ -327,25 +327,35 @@
         
         // 銘柄分析
         async function analyzeStock() {
-            const symbol = document.getElementById("symbol").value;
-            if (!symbol) { alert("シンボルを入力してください"); return; }
-            const loading = document.getElementById("analysisLoading");
-            const result = document.getElementById("analysisResult");
-            loading.classList.add("show");
+            const symbol = document.getElementById('symbol').value;
+            if (!symbol) {
+                alert('シンボルを入力してください');
+                return;
+            }
+            
+            const loading = document.getElementById('analysisLoading');
+            const result = document.getElementById('analysisResult');
+            loading.classList.add('show');
+            
             try {
-                const response = await fetch("/api/analyze", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                const response = await fetch(`/api/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ symbol })
                 });
                 const data = await response.json();
-                result.innerHTML = `<h3>${data.symbol} 分析結果</h3><p><strong>企業:</strong> ${data.company}</p><p><strong>推奨:</strong> ${data.consensus?.recommendation || "N/A"}</p>`;
-                history.push({ type: "銘柄分析", symbol, timestamp: new Date() });
-                result.classList.add("show");
+                result.innerHTML = `
+                    <h3>${data.symbol} 分析結果</h3>
+                    <p><strong>現在価格:</strong> $${data.financialData?.currentPrice}</p>
+                    <p><strong>推奨:</strong> ${data.consensus?.recommendation}</p>
+                    <p><strong>信頼度:</strong> ${(data.consensus?.average_confidence * 100).toFixed(1)}%</p>
+                `;
+                history.push({ type: '銘柄分析', symbol, timestamp: new Date() });
+                result.classList.add('show');
             } catch (error) {
                 result.innerHTML = `<p>エラー: ${error.message}</p>`;
             } finally {
-                loading.classList.remove("show");
+                loading.classList.remove('show');
             }
         }
         

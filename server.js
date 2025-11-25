@@ -40,3 +40,52 @@ app.post('/api/stock/analyze/:ticker', require('./routes/stock'));
 app.post('/api/stock/ai-analysis/:ticker', require('./routes/stock-ai-analysis'));
 
 module.exports = app;
+
+// ========== OAuth認証エンドポイント ==========
+const { verifyToken, getAuthUrl } = require('./auth');
+
+app.get('/auth/login', (req, res) => {
+  const authUrl = getAuthUrl();
+  res.json({ authUrl });
+});
+
+app.get('/auth/logout', (req, res) => {
+  res.json({ message: 'Logged out', redirectUrl: '/' });
+});
+
+app.get('/auth/user', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  const user = await verifyToken(token);
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+  res.json(user);
+});
+
+console.log('✅ OAuth endpoints added');
+
+// ========== magi-ac プロキシ ==========
+const axios = require('axios');
+
+app.post('/api/analyze', async (req, res) => {
+  try {
+    const response = await axios.post('http://localhost:8888/api/analyze', req.body);
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/document/sentiment', async (req, res) => {
+  try {
+    const response = await axios.post('http://localhost:8888/api/document/sentiment', req.body);
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+console.log('✅ magi-ac proxy endpoints added');
