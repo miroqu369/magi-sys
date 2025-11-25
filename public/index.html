@@ -6,155 +6,39 @@
     <title>MAGI System v4.0</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f5f5f5;
-        }
+        body { font-family: -apple-system, sans-serif; background: #f5f5f5; }
         .container { display: flex; height: 100vh; }
-        
-        /* ハンバーガーメニュー */
-        .sidebar {
-            width: 250px;
-            background: #2c3e50;
-            color: white;
-            padding: 20px;
-            overflow-y: auto;
-            position: relative;
-        }
-        .hamburger {
-            display: none;
-            background: none;
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 10px;
-        }
-        .menu-title {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
-        }
-        .menu-item {
-            padding: 12px;
-            margin: 8px 0;
-            background: #34495e;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
+        .sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; }
+        .menu-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .menu-item { padding: 12px; margin: 8px 0; background: #34495e; border-radius: 4px; cursor: pointer; }
         .menu-item:hover { background: #3498db; }
         .menu-item.active { background: #3498db; }
-        
-        /* 認証セクション */
-        .auth-section {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #555;
-        }
-        .user-info {
-            font-size: 12px;
-            background: #1a252f;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 10px;
-        }
-        .auth-button {
-            width: 100%;
-            padding: 10px;
-            background: #27ae60;
-            border: none;
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .auth-button:hover { background: #229954; }
-        .auth-button.logout { background: #e74c3c; }
-        .auth-button.logout:hover { background: #c0392b; }
-        
-        /* コンテンツエリア */
-        .content {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-            background: white;
-        }
+        .content { flex: 1; padding: 30px; overflow-y: auto; background: white; }
         .page { display: none; }
         .page.active { display: block; }
-        
-        /* フォーム */
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        input, textarea, select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        button {
-            padding: 10px 20px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:hover { background: #2980b9; }
-        
-        /* レスポンシブ */
-        @media (max-width: 768px) {
-            .hamburger { display: block; }
-            .sidebar {
-                position: absolute;
-                left: -250px;
-                height: 100vh;
-                z-index: 100;
-                transition: 0.3s;
-            }
-            .sidebar.open { left: 0; }
-            .content { padding: 20px; }
-        }
-        
-        .loading { display: none; }
-        .loading.show { display: block; }
         .result { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 4px; }
-        .result.show { display: block; }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- サイドバー -->
-        <div class="sidebar" id="sidebar">
+        <div class="sidebar">
             <div class="menu-title">≡ MAGI v4.0</div>
-            
-            <div class="menu-item active" data-page="qa">質問応答</div>
-            <div class="menu-item" data-page="analysis">銘柄分析</div>
-            <div class="menu-item" data-page="document">文書解析</div>
-            <div class="menu-item" data-page="history">履歴</div>
-            <div class="menu-item" data-page="settings">設定</div>
-            
-            <!-- 認証セクション -->
-            <div class="auth-section">
-                <div id="userInfo" class="user-info" style="display:none;">
-                    <strong id="userName"></strong><br>
-                    <small id="userEmail"></small>
-                </div>
-                <button class="auth-button" id="authButton" onclick="handleAuth()">ログイン</button>
-            </div>
+            <div class="menu-item active" onclick="switchPage('qa')">質問応答</div>
+            <div class="menu-item" onclick="switchPage('analysis')">銘柄分析</div>
+            <div class="menu-item" onclick="switchPage('document')">文書解析</div>
+            <div class="menu-item" onclick="switchPage('history')">履歴</div>
+            <div class="menu-item" onclick="switchPage('settings')">設定</div>
         </div>
-        
+
         <!-- コンテンツ -->
         <div class="content">
-            <!-- 質問応答ページ -->
+            <!-- 質問応答 -->
             <div class="page active" id="qa">
                 <h2>質問応答</h2>
                 <div class="form-group">
@@ -162,11 +46,10 @@
                     <textarea id="question" placeholder="質問を入力..." rows="4"></textarea>
                 </div>
                 <button onclick="submitQuestion()">送信</button>
-                <div class="loading" id="qaLoading">処理中...</div>
                 <div class="result" id="qaResult"></div>
             </div>
-            
-            <!-- 銘柄分析ページ -->
+
+            <!-- 銘柄分析 -->
             <div class="page" id="analysis">
                 <h2>銘柄分析</h2>
                 <div class="form-group">
@@ -174,215 +57,85 @@
                     <input type="text" id="symbol" placeholder="例: AAPL" value="AAPL">
                 </div>
                 <button onclick="analyzeStock()">分析</button>
-                <div class="loading" id="analysisLoading">処理中...</div>
                 <div class="result" id="analysisResult"></div>
             </div>
-            
-            <!-- 文書解析ページ -->
+
+            <!-- 文書解析 -->
             <div class="page" id="document">
                 <h2>文書解析</h2>
-                <div class="form-group">
-                    <label>銘柄シンボル</label>
-                    <input type="text" id="docSymbol" placeholder="例: AAPL" value="AAPL">
-                </div>
                 <div class="form-group">
                     <label>テキスト</label>
                     <textarea id="docText" placeholder="テキストを入力..." rows="6"></textarea>
                 </div>
-                <button onclick="analyzeSentiment()">センチメント分析</button>
-                <div class="loading" id="docLoading">処理中...</div>
+                <button onclick="analyzeSentiment()">分析</button>
                 <div class="result" id="docResult"></div>
             </div>
-            
-            <!-- 履歴ページ -->
+
+            <!-- 履歴 -->
             <div class="page" id="history">
                 <h2>履歴</h2>
                 <div id="historyList"></div>
             </div>
-            
-            <!-- 設定ページ -->
+
+            <!-- 設定 -->
             <div class="page" id="settings">
                 <h2>設定</h2>
                 <div class="form-group">
-                    <label>MAGI AC URL</label>
-                    <input type="text" id="magiAcUrl" value="http://localhost:8888">
+                    <label>API URL</label>
+                    <input type="text" id="apiUrl" value="http://localhost:8888">
                 </div>
                 <button onclick="saveSettings()">保存</button>
             </div>
         </div>
     </div>
-    
+
     <script>
-        // グローバル状態
-        let currentUser = null;
-        let authToken = null;
         const history = [];
-        let magiAcUrl = 'http://localhost:8888';
-        
-        // メニュー切り替え
-        document.querySelectorAll('.menu-item').forEach(item => {
-            item.addEventListener('click', function() {
-                document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
-                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-                this.classList.add('active');
-                document.getElementById(this.dataset.page).classList.add('active');
-                updateHistory();
-            });
-        });
-        
-        // OAuth認証処理
-        async function handleAuth() {
-            if (currentUser) {
-                logout();
-            } else {
-                login();
-            }
-        }
-        
-        async function login() {
-            try {
-                const response = await fetch('/auth/login');
-                const data = await response.json();
-                window.location.href = data.authUrl;
-            } catch (error) {
-                alert('ログイン失敗: ' + error.message);
-            }
-        }
-        
-        function logout() {
-            currentUser = null;
-            authToken = null;
-            localStorage.removeItem('authToken');
-            updateAuthUI();
-            alert('ログアウトしました');
-        }
-        
-        // ユーザー情報表示
-        function updateAuthUI() {
-            const userInfo = document.getElementById('userInfo');
-            const authButton = document.getElementById('authButton');
+        let apiUrl = 'http://localhost:8888';
+
+        // ページ切り替え
+        function switchPage(pageId) {
+            document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
             
-            if (currentUser) {
-                document.getElementById('userName').textContent = currentUser.name || 'User';
-                document.getElementById('userEmail').textContent = currentUser.email || '';
-                userInfo.style.display = 'block';
-                authButton.textContent = 'ログアウト';
-                authButton.classList.add('logout');
-            } else {
-                userInfo.style.display = 'none';
-                authButton.textContent = 'ログイン';
-                authButton.classList.remove('logout');
-            }
+            event.target.classList.add('active');
+            document.getElementById(pageId).classList.add('active');
+            updateHistory();
         }
-        
-        // ページ読み込み時にトークン確認
-        window.addEventListener('load', async function() {
-            const token = localStorage.getItem('authToken');
-            if (token) {
-                try {
-                    const response = await fetch('/auth/user', {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (response.ok) {
-                        authToken = token;
-                        currentUser = await response.json();
-                        updateAuthUI();
-                    } else {
-                        localStorage.removeItem('authToken');
-                    }
-                } catch (error) {
-                    console.log('トークン検証失敗');
-                }
-            }
-        });
-        
-        // 質問応答
-        async function submitQuestion() {
-            const question = document.getElementById('question').value;
-            if (!question) {
-                alert('質問を入力してください');
-                return;
-            }
-            
-            const loading = document.getElementById('qaLoading');
-            const result = document.getElementById('qaResult');
-            loading.classList.add('show');
-            
-            try {
-                const response = await fetch('/api/consensus', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: question })
-                });
-                const data = await response.json();
-                result.innerHTML = `<h3>回答</h3><p>${data.final || JSON.stringify(data)}</p>`;
-                history.push({ type: '質問応答', prompt: question, timestamp: new Date() });
-                result.classList.add('show');
-            } catch (error) {
-                result.innerHTML = `<p>エラー: ${error.message}</p>`;
-            } finally {
-                loading.classList.remove('show');
-            }
-        }
-        
+
         // 銘柄分析
         async function analyzeStock() {
-            const symbol = document.getElementById("symbol").value;
-            if (!symbol) { alert("シンボルを入力してください"); return; }
-            const loading = document.getElementById("analysisLoading");
-            const result = document.getElementById("analysisResult");
-            loading.classList.add("show");
-            try {
-                const response = await fetch("/api/analyze", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ symbol })
-                });
-                const data = await response.json();
-                result.innerHTML = `<h3>${data.symbol} 分析結果</h3><p><strong>企業:</strong> ${data.company}</p><p><strong>推奨:</strong> ${data.consensus?.recommendation || "N/A"}</p>`;
-                history.push({ type: "銘柄分析", symbol, timestamp: new Date() });
-                result.classList.add("show");
-            } catch (error) {
-                result.innerHTML = `<p>エラー: ${error.message}</p>`;
-            } finally {
-                loading.classList.remove("show");
-            }
-        }
-        
-        // センチメント分析
-        async function analyzeSentiment() {
-            const symbol = document.getElementById('docSymbol').value;
-            const text = document.getElementById('docText').value;
-            if (!text) {
-                alert('テキストを入力してください');
-                return;
-            }
+            const symbol = document.getElementById('symbol').value;
+            if (!symbol) { alert('シンボルを入力してください'); return; }
             
-            const loading = document.getElementById('docLoading');
-            const result = document.getElementById('docResult');
-            loading.classList.add('show');
+            const result = document.getElementById('analysisResult');
+            result.innerHTML = '処理中...';
             
             try {
-                const response = await fetch(`/api/document/sentiment`, {
+                const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ symbol, text })
+                    body: JSON.stringify({ symbol })
                 });
-                const data = await response.json();
-                const s = data.sentiment;
-                result.innerHTML = `
-                    <h3>${symbol} センチメント分析</h3>
-                    <p><strong>センチメント:</strong> ${s.sentiment}</p>
-                    <p><strong>スコア:</strong> ${s.score}</p>
-                `;
-                result.classList.add('show');
+                const json = await response.json();
+                
+                if (json.success) {
+                    const d = json.data;
+                    result.innerHTML = `
+                        <h3>${d.symbol} 分析結果</h3>
+                        <p><strong>企業:</strong> ${d.company}</p>
+                        <p><strong>推奨:</strong> ${d.consensus.recommendation}</p>
+                        <p><strong>信頼度:</strong> ${(d.consensus.confidence * 100).toFixed(1)}%</p>
+                    `;
+                    history.push({ type: '銘柄分析', symbol, timestamp: new Date() });
+                } else {
+                    result.innerHTML = `<p>エラー: ${json.error}</p>`;
+                }
             } catch (error) {
                 result.innerHTML = `<p>エラー: ${error.message}</p>`;
-            } finally {
-                loading.classList.remove('show');
             }
         }
-        
+
         // 履歴更新
         function updateHistory() {
             const list = document.getElementById('historyList');
@@ -390,19 +143,26 @@
                 list.innerHTML = '<p>まだ履歴がありません。</p>';
                 return;
             }
-            list.innerHTML = history.map((h, i) => `
+            list.innerHTML = history.map(h => `
                 <div style="padding: 12px; background: #f8f9fa; border-radius: 4px; margin-bottom: 8px;">
                     <strong>${h.type}</strong> - ${new Date(h.timestamp).toLocaleString('ja-JP')}
-                    ${h.prompt ? `<br><small>${h.prompt.substring(0, 100)}...</small>` : ''}
                     ${h.symbol ? `<br><small>銘柄: ${h.symbol}</small>` : ''}
                 </div>
             `).reverse().join('');
         }
-        
+
         // 設定保存
         function saveSettings() {
-            magiAcUrl = document.getElementById('magiAcUrl').value;
+            apiUrl = document.getElementById('apiUrl').value;
             alert('設定を保存しました');
+        }
+
+        function submitQuestion() {
+            alert('質問応答機能は準備中です');
+        }
+
+        function analyzeSentiment() {
+            alert('文書解析機能は準備中です');
         }
     </script>
 </body>
