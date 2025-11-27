@@ -4,7 +4,7 @@
   "description": "MAGI Consensus LLM System with GPT Integration Modes",
   "main": "bootstrap.js",
   "scripts": {
-    "start": "node bootstrap.js",
+    "start": "node server.js",
     "test": "node tests/retry.test.js && node tests/base-provider.test.js",
     "lint": "eslint ."
   },

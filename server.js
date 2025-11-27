@@ -1,185 +1,50 @@
 'use strict';
 const express = require('express');
-const axios = require('axios');
-const { enhancePromptWithSpec } = require('./spec-client');
-const { verifyToken, getAuthUrl } = require('./auth');
+const GrokProvider = require('./providers/grok');
+const GeminiProvider = require('./providers/gemini');
+const AnthropicProvider = require('./providers/anthropic');
+const OpenAIProvider = require('./providers/openai');
 
-const app = global.app || express();
+const app = express();
+app.use(express.json());
 
-// ============ ロガー (構造化ログ) ============
-const logger = {
-  debug: (msg, data) => console.log(`[DEBUG] ${msg}`, data || ''),
-  info: (msg, data) => console.log(`[INFO] ${msg}`, data || ''),
-  warn: (msg, data) => console.warn(`[WARN] ${msg}`, data || ''),
-  error: (msg, data) => console.error(`[ERROR] ${msg}`, data || '')
-};
+const grok = new GrokProvider();
+const gemini = new GeminiProvider();
+const anthropic = new AnthropicProvider();
+const openaiProvider = new OpenAIProvider();
 
-// ============ 標準レスポンス形式 ============
-const successResponse = (data, message = 'Success') => ({
-  success: true,
-  message,
-  data,
-  timestamp: new Date().toISOString()
-});
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-const errorResponse = (error, statusCode = 500) => ({
-  success: false,
-  error: error.message || error,
-  statusCode,
-  timestamp: new Date().toISOString()
-});
+app.get('/status', (req, res) => res.json({
+  grok: grok.isConfigured(),
+  gemini: gemini.isConfigured(),
+  claude: anthropic.isConfigured(),
+  openai: openaiProvider.isConfigured()
+}));
 
-// ============ バリデーション ============
-const validatePrompt = (prompt) => {
-  if (!prompt) return { valid: false, error: 'Prompt is required' };
-  if (typeof prompt !== 'string') return { valid: false, error: 'Prompt must be string' };
-  if (prompt.length > 5000) return { valid: false, error: 'Prompt too long' };
-  return { valid: true };
-};
-
-// ========== LLM Consensus ==========
 app.post('/api/consensus', async (req, res) => {
   try {
-    const { prompt, meta } = req.body;
-    
-    // バリデーション
-    const validation = validatePrompt(prompt);
-    if (!validation.valid) {
-      logger.warn('Consensus validation failed', validation.error);
-      return res.status(400).json(errorResponse(validation.error, 400));
-    }
-    
-    // 仕様書をプロンプトに挿入
-    const enhancedPrompt = global.specifications 
-      ? enhancePromptWithSpec(prompt, global.specifications)
-      : prompt;
-    
-    logger.info('Processing consensus', { prompt: prompt.substring(0, 50) });
-    
-    res.json(successResponse({
-      final: 'LLM consensus endpoint (with spec context)',
-      prompt: enhancedPrompt.substring(0, 200) + '...',
-      spec_context_used: !!global.specifications,
-      meta
-    }, 'Consensus processed'));
-    
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error: 'Prompt required' });
+    console.log('[Consensus]', prompt.substring(0, 50));
+    const start = Date.now();
+    const r = await Promise.allSettled([
+      grok.isConfigured() ? grok.send(prompt) : Promise.reject('n'),
+      gemini.isConfigured() ? gemini.send(prompt) : Promise.reject('n'),
+      anthropic.isConfigured() ? anthropic.send(prompt) : Promise.reject('n'),
+      openaiProvider.isConfigured() ? openaiProvider.send(prompt) : Promise.reject('n')
+    ]);
+    const resp = {
+      balthasar: r[0].status === 'fulfilled' ? r[0].value.text : null,
+      melchior: r[1].status === 'fulfilled' ? r[1].value.text : null,
+      casper: r[2].status === 'fulfilled' ? r[2].value.text : null,
+      mary: r[3].status === 'fulfilled' ? r[3].value.text : null
+    };
+    const valid = Object.values(resp).filter(x => x);
+    res.json({ final: valid[0] || 'No response', ...resp, metrics: { ms: Date.now() - start, valid: valid.length } });
   } catch (e) {
-    logger.error('Consensus endpoint error', e.message);
-    res.status(500).json(errorResponse(e, 500));
+    res.status(500).json({ error: e.message });
   }
 });
 
-// ========== OAuth認証 ==========
-app.get('/auth/login', (req, res) => {
-  try {
-    const authUrl = getAuthUrl();
-    logger.info('Auth login requested');
-    res.json(successResponse({ authUrl }, 'Auth URL generated'));
-  } catch (e) {
-    logger.error('Auth login error', e.message);
-    res.status(500).json(errorResponse(e, 500));
-  }
-});
-
-app.get('/auth/logout', (req, res) => {
-  try {
-    logger.info('Auth logout requested');
-    res.json(successResponse({ message: 'Logged out', redirectUrl: '/' }));
-  } catch (e) {
-    logger.error('Auth logout error', e.message);
-    res.status(500).json(errorResponse(e, 500));
-  }
-});
-
-app.get('/auth/user', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      logger.warn('Auth user: no token provided');
-      return res.status(401).json(errorResponse('No token provided', 401));
-    }
-    
-    const user = await verifyToken(token);
-    if (!user) {
-      logger.warn('Auth user: invalid token');
-      return res.status(401).json(errorResponse('Invalid token', 401));
-    }
-    
-    logger.info('Auth user verified');
-    res.json(successResponse(user, 'User verified'));
-    
-  } catch (e) {
-    logger.error('Auth user error', e.message);
-    res.status(500).json(errorResponse(e, 500));
-  }
-});
-
-// ========== magi-ac プロキシ ==========
-app.post('/api/analyze', async (req, res) => {
-  try {
-    const { symbol } = req.body;
-    if (!symbol) {
-      logger.warn('Analyze: missing symbol');
-      return res.status(400).json(errorResponse('Symbol required', 400));
-    }
-    
-    logger.debug('Proxying to magi-ac', { symbol });
-    const response = await axios.post('http://localhost:8888/api/analyze', req.body);
-    res.json(response.data);
-    
-  } catch (error) {
-    logger.error('Analyze proxy error', error.message);
-    res.status(500).json(errorResponse(error, 500));
-  }
-});
-
-app.post('/api/document/sentiment', async (req, res) => {
-  try {
-    logger.debug('Proxying document sentiment to magi-ac');
-    const response = await axios.post('http://localhost:8888/api/document/sentiment', req.body);
-    res.json(response.data);
-    
-  } catch (error) {
-    logger.error('Document sentiment proxy error', error.message);
-    res.status(500).json(errorResponse(error, 500));
-  }
-});
-
-// ========== Health & Status ==========
-app.get('/health', (req, res) => {
-  try {
-    res.json(successResponse({ status: 'healthy' }));
-  } catch (e) {
-    logger.error('Health check error', e.message);
-    res.status(500).json(errorResponse(e, 500));
-  }
-});
-
-app.get('/status', (req, res) => {
-  try {
-    res.json(successResponse({
-      server: 'MAGI System',
-      specifications_loaded: !!global.specifications,
-      uptime: process.uptime()
-    }));
-  } catch (e) {
-    logger.error('Status check error', e.message);
-    res.status(500).json(errorResponse(e, 500));
-  }
-});
-
-// ========== エラーハンドリング ==========
-app.use((err, req, res, next) => {
-  logger.error('Unhandled error', err.message);
-  res.status(500).json(errorResponse(err, 500));
-});
-
-app.use((req, res) => {
-  logger.warn('404 Not Found', req.path);
-  res.status(404).json(errorResponse('Endpoint not found', 404));
-});
-
-logger.info('✅ OAuth endpoints added');
-logger.info('✅ magi-ac proxy endpoints added');
-
-module.exports = app;
+app.listen(process.env.PORT || 8081, () => console.log('MAGI-SYS on ' + (process.env.PORT || 8081)));

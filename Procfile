@@ -1,1 +1,1 @@
-web: node bootstrap.js
+web: node server.js
